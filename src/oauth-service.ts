@@ -1,14 +1,11 @@
 import {Base64} from 'js-base64';
 import {fromByteArray} from 'base64-js';
-import * as _sha256 from 'sha256';
 import sha256 from 'fast-sha256';
 import * as nacl from 'tweetnacl-util';
 
 import { Http, URLSearchParams, Headers } from '@angular/http';
 import { Injectable } from '@angular/core';
 import { Observable, Observer } from 'rxjs';
-
-//var sha256: any = _sha256;
 
 @Injectable()
 export class OAuthService {
