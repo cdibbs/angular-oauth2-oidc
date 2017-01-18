@@ -26,9 +26,13 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "dependencies": {
+    "@types/base64-js": "^1.2.5",
+    "@types/js-base64": "^2.1.5",
     "base64-js": "^1.2.0",
+    "fast-sha256": "^1.0.0",
     "js-base64": "^2.1.9",
-    "sha256": "^0.2.0"
+    "sha256": "^0.2.0",
+    "tweetnacl-util": "^0.13.5"
   },
   "devDependencies": {
     "@angular/common": "^2.0.0",
