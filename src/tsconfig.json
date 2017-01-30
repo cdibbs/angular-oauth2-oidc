@@ -1,23 +1,20 @@
 {
   "compilerOptions": {
-    "noImplicitAny": false,
-    "module": "commonjs",
-    "target": "ES5",
+    "baseUrl": "",
+    "declaration": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "sourceMap": true,
-    "declaration": true,
-    "typeRoots": ["node_modules/@types"],
+    "lib": ["es6", "dom"],
+    "mapRoot": "./",
+    "module": "es6",
     "moduleResolution": "node",
-    "outDir": "./dist",
-    "lib": [
-      "es6", "dom"
+    "outDir": "../dist/out-tsc",
+    "sourceMap": true,
+    "target": "es5",
+    "typeRoots": [
+      "../node_modules/@types"
     ]
   },
-  "files": [
-    "src/deps.d.ts",
-    "index.ts"
-  ],
   "exclude": [
     "node_modules",
     "dist"

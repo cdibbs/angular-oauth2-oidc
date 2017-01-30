@@ -1,82 +1,36 @@
+import { Http, URLSearchParams, Headers } from '@angular/http';
+import { Injectable } from '@angular/core';
+import { Observable, Observer } from 'rxjs';
+
 import {Base64} from 'js-base64';
 import {fromByteArray} from 'base64-js';
 import sha256 from 'fast-sha256';
 import * as nacl from 'tweetnacl-util';
 
-import { Http, URLSearchParams, Headers } from '@angular/http';
-import { Injectable } from '@angular/core';
-import { Observable, Observer } from 'rxjs';
+import { IAuthStrategy } from './i';
+import { OAuthConfig, DiscoveryDocument } from './models';
 
 @Injectable()
 export class OAuthService {
-
-    public clientId = "";
-    public redirectUri = "";
-    public loginUrl = "";
-    public scope = "";
-    public resource = "";
-    public rngUrl = "";
-    public oidc = false;
-    public options: any;
-    public state = "";
-    public issuer = "";
-    public validationHandler: any;
-    public logoutUrl = "";
-    public clearHashAfterLogin: boolean = true;
-    public tokenEndpoint: string;
-    public userinfoEndpoint: string;
-
-    public dummyClientSecret: string;
-    
+    private _discoveryDoc: DiscoveryDocument;
+    private discoveryDocumentLoadedSender: Observer<any>;
     public discoveryDocumentLoaded: boolean = false;
     public discoveryDocumentLoaded$: Observable<any>;
-    private discoveryDocumentLoadedSender: Observer<any>;
 
-    private grantTypesSupported: Array<string> = [];
+    public get strategy(): IAuthStrategy { return this._strategy; };
+    public get config(): OAuthConfig { return this._config; };
+    public resource = "";
+    public options: any;
+    public state = "";
+    public validationHandler: any;
+    public dummyClientSecret: string;    
+    private _storage: Storage = localStorage;
 
     public setStorage(storage: Storage) {
         this._storage = storage;
     }
     
-    private _storage: Storage = localStorage;
-
-    constructor(private http: Http) {
-        this.discoveryDocumentLoaded$ = Observable.create(sender => {
-            this.discoveryDocumentLoadedSender = sender;
-        }).publish().connect();
-    }
-
-    loadDiscoveryDocument(fullUrl: string = null): Promise<any> {
-
-        return new Promise((resolve, reject) => {
-
-            if (!fullUrl) {
-                fullUrl = this.issuer + '/.well-known/openid-configuration';
-            }
-
-            this.http.get(fullUrl).map(r => r.json()).subscribe(
-                (doc) => {
-
-                    this.loginUrl = doc.authorization_endpoint;
-                    this.logoutUrl = doc.end_session_endpoint;
-                    this.grantTypesSupported = doc.grant_types_supported;
-                    this.issuer = doc.issuer;
-                    // this.jwks_uri = this.jwks_uri;
-                    this.tokenEndpoint = doc.token_endpoint;
-                    this.userinfoEndpoint = doc.userinfo_endpoint;
-
-                    this.discoveryDocumentLoaded = true;
-                    this.discoveryDocumentLoadedSender.next(doc);
-                    resolve(doc);
-                },
-                (err) => {
-                    console.error('error loading dicovery document', err);
-                    reject(err);
-                }
-            );
-        });
-
-    }
+    constructor(private http: Http, private _config: OAuthConfig, private _strategy: IAuthStrategy) {}
 
     fetchTokenUsingPasswordFlowAndLoadUserProfile(userName: string, password: string) {
         return this
@@ -84,37 +38,12 @@ export class OAuthService {
                 .then(() => this.loadUserProfile());
     }
 
-    loadUserProfile() {
-        if (!this.hasValidAccessToken()) throw Error("Can not load User Profile without access_token");
-
-        return new Promise((resolve, reject) => {
-
-            let headers = new Headers();
-            headers.set('Authorization', 'Bearer ' + this.getAccessToken());
-
-            this.http.get(this.userinfoEndpoint, { headers }).map(r => r.json()).subscribe(
-                (doc) => {
-                    console.debug('userinfo received', doc);
-                    this._storage.setItem('id_token_claims_obj', JSON.stringify(doc));
-                    resolve(doc);
-                },
-                (err) => {
-                    console.error('error loading user info', err);
-                    reject(err);
-                }
-            );
-        });
-
-
-    }
-
     fetchTokenUsingPasswordFlow(userName: string, password: string) {
-
         return new Promise((resolve, reject) => { 
             let search = new URLSearchParams();
             search.set('grant_type', 'password');
-            search.set('client_id', this.clientId);
-            search.set('scope', this.scope);
+            search.set('client_id', this.config.clientId);
+            search.set('scope', this.config.scope);
             search.set('username', userName);
             search.set('password', password);
             
@@ -131,7 +60,6 @@ export class OAuthService {
                 (tokenResponse) => {
                     console.debug('tokenResponse', tokenResponse);
                     this.storeAccessTokenResponse(tokenResponse.access_token, tokenResponse.refresh_token, tokenResponse.expires_in);
-
                     resolve(tokenResponse);
                 },
                 (err) => {
@@ -145,12 +73,11 @@ export class OAuthService {
 
 
     refreshToken() {
-
         return new Promise((resolve, reject) => { 
             let search = new URLSearchParams();
             search.set('grant_type', 'refresh_token');
-            search.set('client_id', this.clientId);
-            search.set('scope', this.scope);
+            search.set('client_id', this.config.clientId);
+            search.set('scope', this.config.scope);
             search.set('refresh_token', this._storage.getItem('refresh_token'));
             
             if (this.dummyClientSecret) {
@@ -179,67 +106,44 @@ export class OAuthService {
 
     
     createLoginUrl(state) {
-        var that = this;
+        let nonce = this.createAndSaveNonce();
+        state = state ? nonce + ";" + state : nonce;
+        let response_type = this.config.oidc ? "id_token+token" : "token";
 
-        if (typeof state === "undefined") { state = ""; }
+        var url = this.strategy.loginUrl 
+                    + "?response_type="
+                    + response_type
+                    + "&client_id=" 
+                    + encodeURIComponent(this.config.clientId)
+                    + "&state=" 
+                    + encodeURIComponent(state)
+                    + "&redirect_uri=" 
+                    + encodeURIComponent(this.config.redirectUri) 
+                    + "&scope=" 
+                    + encodeURIComponent(this.config.scope);
 
-        return this.createAndSaveNonce().then(function (nonce: any) {
-
-            if (state) {
-                state = nonce + ";" + state;
-            }
-            else {
-                state = nonce;   
-            }
-
-            var response_type = "token";
-
-            if (that.oidc) {
-                response_type = "id_token+token";
-            }
-
-            var url = that.loginUrl 
-                        + "?response_type="
-                        + response_type
-                        + "&client_id=" 
-                        + encodeURIComponent(that.clientId)
-                        + "&state=" 
-                        + encodeURIComponent(state)
-                        + "&redirect_uri=" 
-                        + encodeURIComponent(that.redirectUri) 
-                        + "&scope=" 
-                        + encodeURIComponent(that.scope);
-
-            if (that.resource) {
-                url += "&resource=" + encodeURIComponent(that.resource);
-            }
-            
-            if (that.oidc) {
-                url += "&nonce=" + encodeURIComponent(nonce);
-            }
-            
-            return url;
-        });
+        if (this.resource) {
+            url += "&resource=" + encodeURIComponent(this.resource);
+        }
+        
+        if (this.config.oidc) {
+            url += "&nonce=" + encodeURIComponent(nonce);
+        }
+        
+        return url;
     };
 
     initImplicitFlow(additionalState = "") {
-        this.createLoginUrl(additionalState).then(function (url) {
-            location.href = url;
-        })
-        .catch(function (error) {
-            console.error("Error in initImplicitFlow");
-            console.error(error);
-        });
+        location.href = this.createLoginUrl(additionalState);
     };
     
     callEventIfExists(options: any) {
-        var that = this;
-        if (options.onTokenReceived) {
+                if (options.onTokenReceived) {
             var tokenParams = { 
-                idClaims: that.getIdentityClaims(),
-                idToken: that.getIdToken(),
-                accessToken: that.getAccessToken(),
-                state: that.state
+                idClaims: this.getIdentityClaims(),
+                idToken: this.getIdToken(),
+                accessToken: this.getAccessToken(),
+                state: this.state
             };
             options.onTokenReceived(tokenParams);
         }
@@ -275,7 +179,7 @@ export class OAuthService {
         var oauthSuccess = false;
 
         if (!accessToken || !state) return false;
-        if (this.oidc && !idToken) return false;
+        if (this.config.oidc && !idToken) return false;
 
         var savedNonce = this._storage.getItem("nonce");
 
@@ -295,7 +199,7 @@ export class OAuthService {
         
         if (!oauthSuccess) return false;
 
-        if (this.oidc) {
+        if (this.config.oidc) {
             oidcSuccess = this.processIdToken(idToken, accessToken);
             if (!oidcSuccess) return false;  
         }
@@ -318,27 +222,18 @@ export class OAuthService {
             this.callEventIfExists(options);
         }
         
-        // NEXT VERSION: Notify parent-window (iframe-refresh)
-        /*
-        var win = window;
-        if (win.parent && win.parent.onOAuthCallback) {
-            win.parent.onOAuthCallback(this.state);
-        }            
-        */
-
-        if (this.clearHashAfterLogin) location.hash = '';
-        
+        if (this.config.clearHashAfterLogin) location.hash = '';        
         return true;
     };
     
     processIdToken(idToken, accessToken) {
             var tokenParts = idToken.split(".");
-            var claimsBase64 = this.padBase64(tokenParts[1]);
+            var claimsBase64 = tokenParts[1] + "====".substr(0, tokenParts[1].length % 4);
             var claimsJson = Base64.decode(claimsBase64);
             var claims = JSON.parse(claimsJson);
             var savedNonce = this._storage.getItem("nonce");
             
-            if (claims.aud !== this.clientId) {
+            if (claims.aud !== this.config.clientId) {
                 console.warn("Wrong audience: " + claims.aud);
                 return false;
             }
@@ -393,118 +288,26 @@ export class OAuthService {
         return JSON.parse(claims);
     }
     
-    getIdToken() {
-        return this._storage.getItem("id_token");
-    }
-    
-    padBase64(base64data) {
-        while (base64data.length % 4 !== 0) {
-            base64data += "=";
-        }
-        return base64data;
-    }
+    getIdToken(): string { return this.strategy.getIdToken(); }
+    getAccessToken(): string { return this.strategy.getAccessToken(); }
+    hasValidAccessToken(): boolean { return this.strategy.hasValidAccessToken(); }
+    hasValidIdToken(): boolean { return this.strategy.hasValidIdToken(); }
 
-    tryLoginWithIFrame() {
-        throw new Error("tryLoginWithIFrame has not been implemented so far");
-    };
-    
-    tryRefresh(timeoutInMsec) {
-        throw new Error("tryRefresh has not been implemented so far");
-    };
+    /**
+     * Calls the strategy's logout method.
+     * @param {boolean} noRedirect whether to redirect after deleting the session information from storage. Default: false.
+     */
+    logOut(noRedirect: boolean = false): void { this.strategy.logout(noRedirect); };
 
-    getAccessToken() {
-        return this._storage.getItem("access_token");
-    };
+    createAndSaveNonce(): string {
+        var nonce = "";
+        const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-    hasValidAccessToken() {
-        if (this.getAccessToken()) {
+        for (var i = 0; i < 40; i++)
+            nonce += possible.charAt(Math.floor(Math.random() * possible.length));    
 
-            var expiresAt = this._storage.getItem("expires_at");
-            var now = new Date();
-            if (expiresAt && parseInt(expiresAt) < now.getTime()) {
-                return false;
-            }
-
-            return true;
-        }
-
-        return false;
-    };
-    
-    hasValidIdToken() {
-        if (this.getIdToken()) {
-
-            var expiresAt = this._storage.getItem("id_token_expires_at");
-            var now = new Date();
-            if (expiresAt && parseInt(expiresAt) < now.getTime()) {
-                return false;
-            }
-
-            return true;
-        }
-
-        return false;
-    };
-    
-    authorizationHeader() {
-        return "Bearer " + this.getAccessToken();
-    }
-    
-    logOut(noRedirectToLogoutUrl: boolean = false) {
-        var id_token = this.getIdToken();
-        this._storage.removeItem("access_token");
-        this._storage.removeItem("id_token");
-        this._storage.removeItem("refresh_token");
-        this._storage.removeItem("nonce");
-        this._storage.removeItem("expires_at");
-        this._storage.removeItem("id_token_claims_obj");
-        this._storage.removeItem("id_token_expires_at");
-        
-        if (!this.logoutUrl) return;
-        if (noRedirectToLogoutUrl) return;
-        
-        let logoutUrl: string;
-        
-        // For backward compatibility
-        if (this.logoutUrl.indexOf('{{') > -1) {
-            logoutUrl = this.logoutUrl.replace(/\{\{id_token\}\}/, id_token);
-        }
-        else {
-            logoutUrl = this.logoutUrl + "?id_token=" 
-                                + encodeURIComponent(id_token)
-                                + "&redirect_uri="
-                                + encodeURIComponent(this.redirectUri);
-        }
-        location.href = logoutUrl;
-    };
-
-    createAndSaveNonce() {
-        var that = this;
-        return this.createNonce().then(function (nonce: any) {
-            that._storage.setItem("nonce", nonce);
-            return nonce;
-        })
-
-    };
-
-    createNonce() {
-        
-        return new Promise((resolve, reject) => { 
-        
-            if (this.rngUrl) {
-                throw new Error("createNonce with rng-web-api has not been implemented so far");
-            }
-            else {
-                var text = "";
-                var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-                for (var i = 0; i < 40; i++)
-                    text += possible.charAt(Math.floor(Math.random() * possible.length));
-                
-                resolve(text);
-            }
-        
-        });
+        this._storage.setItem("nonce", nonce);
+        return nonce;
     };
 
     getFragment() {
@@ -518,12 +321,9 @@ export class OAuthService {
     parseQueryString(queryString) {
         var data = {}, pairs, pair, separatorIndex, escapedKey, escapedValue, key, value;
 
-        if (queryString === null) {
-            return data;
-        }
-
+        if (queryString === null) return data;
+            
         pairs = queryString.split("&");
-
         for (var i = 0; i < pairs.length; i++) {
             pair = pairs[i];
             separatorIndex = pair.indexOf("=");
@@ -548,9 +348,7 @@ export class OAuthService {
         return data;
     };
 
-    
-
-    checkAtHash(accessToken: string, idClaims) {
+    checkAtHash(accessToken: string, idClaims): boolean {
         if (!accessToken || !idClaims || !idClaims.at_hash ) return true;
         var tokenHash: Uint8Array = sha256(nacl.decodeUTF8(accessToken));
         var leftMostHalf = tokenHash.slice(0, (tokenHash.length/2));
@@ -563,10 +361,7 @@ export class OAuthService {
         if (atHash != claimsAtHash) {
             console.warn("exptected at_hash: " + atHash);    
             console.warn("actual at_hash: " + claimsAtHash);
-        }
-        
-        
+        }       
         return (atHash == claimsAtHash);
-    }
-    
+    }    
 }

@@ -26,6 +26,7 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "dependencies": {
+    "@angular/router": "^3.4.5",
     "@types/base64-js": "^1.2.5",
     "@types/js-base64": "^2.1.5",
     "base64-js": "^1.2.0",

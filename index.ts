@@ -1,8 +1,12 @@
-import { OAuthService } from './src/oauth-service';
-import { NgModule, ModuleWithProviders } from "@angular/core";
+import { NgModule, ModuleWithProviders, ClassProvider, ValueProvider } from "@angular/core";
 import { CommonModule } from "@angular/common";
 
+import { OAuthService } from './src/oauth-service';
+import { OAuthConfig } from './src/models';
+
 export * from './src/oauth-service';
+export * from './src/models';
+export * from './src/models/i';
 
 @NgModule({
   imports: [
@@ -14,10 +18,13 @@ export * from './src/oauth-service';
   ]
 })
 export class OAuthModule {
-  static forRoot(): ModuleWithProviders {
+  static forRoot(config: OAuthConfig): ModuleWithProviders {
     return {
       ngModule: OAuthModule,
-      providers: [OAuthService]
+      providers: [
+        <ValueProvider>{ provide: OAuthConfig, useValue: OAuthConfig },
+        <ClassProvider>{ provide: OAuthService, useClass: OAuthService }
+      ]
     };
   }
 }
