@@ -1,26 +1,31 @@
-import { Http, URLSearchParams, Headers } from '@angular/http';
+import { Http, URLSearchParams, Headers, Request } from '@angular/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, Observer } from 'rxjs';
 
-import { DiscoveryDocument, OAuthConfig } from './models';
+import {Base64} from 'js-base64';
+import {fromByteArray} from 'base64-js';
+import sha256 from 'fast-sha256';
+import * as nacl from 'tweetnacl-util';
+
+import { DiscoveryDocument, BaseOAuthConfig } from './models';
 import { IAuthStrategy } from './i';
 
 @Injectable()
-export class BaseAuthStrategy implements IAuthStrategy {
+export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthStrategy {
     protected _discoveryDoc: DiscoveryDocument;
     protected discoveryDocumentLoadedSender: Observer<any>;
     public discoveryDocumentLoaded: boolean = false;
     public discoveryDocumentLoaded$: Observable<any>;
     public now: Date = new Date();
 
-    public constructor(protected http: Http, protected router: Router, protected _config: OAuthConfig) {
+    public constructor(protected http: Http, protected router: Router, protected _config: TConfig) {
         this.discoveryDocumentLoaded$ = Observable.create(sender => {
             this.discoveryDocumentLoadedSender = sender;
         }).publish().connect();
     }
 
-    public get config(): OAuthConfig { return this._config; };
+    public get config(): TConfig { return this._config; };
     public get loginUrl(): string { return this.fetchDocProp("authorization_endpoint", "fallbackLoginUri"); };
     public get logoutUrl(): string { return this.fetchDocProp("end_session_endpoint", "fallbackLogoutUri"); };
 
@@ -54,6 +59,10 @@ export class BaseAuthStrategy implements IAuthStrategy {
         });
     }
 
+    public initiateLoginFlow(): Promise<any> {
+        throw new Error("This must be implemented in derived classes.");
+    }
+
     getIdToken(): string { return this.config.storage.getItem("id_token"); }  
     getAccessToken(): string { return this.config.storage.getItem("access_token"); };
 
@@ -71,6 +80,45 @@ export class BaseAuthStrategy implements IAuthStrategy {
             return !(expiresAt && parseInt(expiresAt) < this.now.getTime())
         }
         return false;
+    };
+
+    createLoginUrl(extraState: string = null): string {
+        let nonce = this.createAndSaveNonce();
+        let state = extraState ? nonce + ";" + extraState : nonce;
+        let response_type = this.config.oidc ? "id_token+token" : "token";
+
+        var url = this.loginUrl 
+                    + "?response_type="
+                    + response_type
+                    + "&client_id=" 
+                    + encodeURIComponent(this.config.clientId)
+                    + "&state=" 
+                    + encodeURIComponent(state)
+                    + "&redirect_uri=" 
+                    + encodeURIComponent(this.config.redirectUri) 
+                    + "&scope=" 
+                    + encodeURIComponent(this.config.scope);
+
+        if (this.config.resource) {
+            url += "&resource=" + encodeURIComponent(this.resource);
+        }
+        
+        if (this.config.oidc) {
+            url += "&nonce=" + encodeURIComponent(nonce);
+        }
+        
+        return url;
+    };
+
+    protected createAndSaveNonce(): string {
+        var nonce = "";
+        const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+        for (var i = 0; i < 40; i++)
+            nonce += possible.charAt(Math.floor(Math.random() * possible.length));    
+
+        this.config.storage.setItem("nonce", nonce);
+        return nonce;
     };
 
     logOut(noRedirect: boolean = false): void {
@@ -92,4 +140,36 @@ export class BaseAuthStrategy implements IAuthStrategy {
                 + encodeURIComponent(this.config.redirectUri);
         this.router.navigateByUrl(logoutUrl);
     };
+
+    protected storeAccessTokenResponse(accessToken: string, refreshToken: string, expiresIn: number): void {
+        this.config.storage.setItem("access_token", accessToken);
+
+        if (expiresIn) {
+            var expiresInMilliSeconds = expiresIn * 1000;
+            var now = new Date();
+            var expiresAt = now.getTime() + expiresInMilliSeconds;
+            this.config.storage.setItem("expires_at", "" + expiresAt);
+        }
+
+        if (refreshToken) {
+            this.config.storage.setItem("refresh_token", refreshToken);
+        }
+    }
+
+    protected checkAtHash(accessToken: string, idClaims): boolean {
+        if (!accessToken || !idClaims || !idClaims.at_hash ) return true;
+        var tokenHash: Uint8Array = sha256(nacl.decodeUTF8(accessToken));
+        var leftMostHalf = tokenHash.slice(0, (tokenHash.length/2));
+        var tokenHashBase64 = fromByteArray(leftMostHalf);
+        var atHash = tokenHashBase64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+        var claimsAtHash = idClaims.at_hash.replace(/=/g, "");
+        
+        var atHash = tokenHashBase64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+
+        if (atHash != claimsAtHash) {
+            console.warn("exptected at_hash: " + atHash);    
+            console.warn("actual at_hash: " + claimsAtHash);
+        }       
+        return (atHash == claimsAtHash);
+    }    
 }

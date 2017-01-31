@@ -8,7 +8,7 @@ import sha256 from 'fast-sha256';
 import * as nacl from 'tweetnacl-util';
 
 import { IAuthStrategy } from './i';
-import { OAuthConfig, DiscoveryDocument } from './models';
+import { BaseOAuthConfig, DiscoveryDocument } from './models';
 
 @Injectable()
 export class OAuthService {
@@ -18,7 +18,7 @@ export class OAuthService {
     public discoveryDocumentLoaded$: Observable<any>;
 
     public get strategy(): IAuthStrategy { return this._strategy; };
-    public get config(): OAuthConfig { return this._config; };
+    public get config(): BaseOAuthConfig { return this._config; };
     public resource = "";
     public options: any;
     public state = "";
@@ -30,49 +30,11 @@ export class OAuthService {
         this._storage = storage;
     }
     
-    constructor(private http: Http, private _config: OAuthConfig, private _strategy: IAuthStrategy) {}
+    constructor(private http: Http, private _config: BaseOAuthConfig, private _strategy: IAuthStrategy) {}
 
-    fetchTokenUsingPasswordFlowAndLoadUserProfile(userName: string, password: string) {
-        return this
-                .fetchTokenUsingPasswordFlow(userName, password)
-                .then(() => this.loadUserProfile());
-    }
+    initiateLoginFlow(): Observable<any> { return this.strategy.initiateLoginFlow(); }
 
-    fetchTokenUsingPasswordFlow(userName: string, password: string) {
-        return new Promise((resolve, reject) => { 
-            let search = new URLSearchParams();
-            search.set('grant_type', 'password');
-            search.set('client_id', this.config.clientId);
-            search.set('scope', this.config.scope);
-            search.set('username', userName);
-            search.set('password', password);
-            
-            if (this.dummyClientSecret) {
-                search.set('client_secret', this.dummyClientSecret);
-            }
-
-            let headers = new Headers();
-            headers.set('Content-Type', 'application/x-www-form-urlencoded');
-
-            let params = search.toString();
-
-            this.http.post(this.tokenEndpoint, params, { headers }).map(r => r.json()).subscribe(
-                (tokenResponse) => {
-                    console.debug('tokenResponse', tokenResponse);
-                    this.storeAccessTokenResponse(tokenResponse.access_token, tokenResponse.refresh_token, tokenResponse.expires_in);
-                    resolve(tokenResponse);
-                },
-                (err) => {
-                    console.error('Error performing password flow', err);
-                    reject(err);
-                }
-            );
-        });
-
-    }
-
-
-    refreshToken() {
+    refreshSession(): Promise<any> {
         return new Promise((resolve, reject) => { 
             let search = new URLSearchParams();
             search.set('grant_type', 'refresh_token');
@@ -104,35 +66,6 @@ export class OAuthService {
 
     }
 
-    
-    createLoginUrl(state) {
-        let nonce = this.createAndSaveNonce();
-        state = state ? nonce + ";" + state : nonce;
-        let response_type = this.config.oidc ? "id_token+token" : "token";
-
-        var url = this.strategy.loginUrl 
-                    + "?response_type="
-                    + response_type
-                    + "&client_id=" 
-                    + encodeURIComponent(this.config.clientId)
-                    + "&state=" 
-                    + encodeURIComponent(state)
-                    + "&redirect_uri=" 
-                    + encodeURIComponent(this.config.redirectUri) 
-                    + "&scope=" 
-                    + encodeURIComponent(this.config.scope);
-
-        if (this.resource) {
-            url += "&resource=" + encodeURIComponent(this.resource);
-        }
-        
-        if (this.config.oidc) {
-            url += "&nonce=" + encodeURIComponent(nonce);
-        }
-        
-        return url;
-    };
-
     initImplicitFlow(additionalState = "") {
         location.href = this.createLoginUrl(additionalState);
     };
@@ -146,21 +79,6 @@ export class OAuthService {
                 state: this.state
             };
             options.onTokenReceived(tokenParams);
-        }
-    }
-
-    private storeAccessTokenResponse(accessToken: string, refreshToken: string, expiresIn: number) {
-        this._storage.setItem("access_token", accessToken);
-
-        if (expiresIn) {
-            var expiresInMilliSeconds = expiresIn * 1000;
-            var now = new Date();
-            var expiresAt = now.getTime() + expiresInMilliSeconds;
-            this._storage.setItem("expires_at", "" + expiresAt);
-        }
-
-        if (refreshToken) {
-            this._storage.setItem("refresh_token", refreshToken);
         }
     }
 
@@ -347,21 +265,4 @@ export class OAuthService {
 
         return data;
     };
-
-    checkAtHash(accessToken: string, idClaims): boolean {
-        if (!accessToken || !idClaims || !idClaims.at_hash ) return true;
-        var tokenHash: Uint8Array = sha256(nacl.decodeUTF8(accessToken));
-        var leftMostHalf = tokenHash.slice(0, (tokenHash.length/2));
-        var tokenHashBase64 = fromByteArray(leftMostHalf);
-        var atHash = tokenHashBase64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-        var claimsAtHash = idClaims.at_hash.replace(/=/g, "");
-        
-        var atHash = tokenHashBase64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-
-        if (atHash != claimsAtHash) {
-            console.warn("exptected at_hash: " + atHash);    
-            console.warn("actual at_hash: " + claimsAtHash);
-        }       
-        return (atHash == claimsAtHash);
-    }    
 }
