@@ -63,6 +63,10 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         throw new Error("This must be implemented in derived classes.");
     }
 
+    public refreshSession(): Promise<any> {
+        throw new Error("This must be implemented in derived classes.");
+    }
+
     getIdToken(): string { return this.config.storage.getItem("id_token"); }  
     getAccessToken(): string { return this.config.storage.getItem("access_token"); };
 
@@ -82,8 +86,14 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         return false;
     };
 
-    createLoginUrl(extraState: string = null): string {
-        let nonce = this.createAndSaveNonce();
+    protected getIdentityClaims(): any {
+        var claims = this.config.storage.getItem("id_token_claims_obj");
+        if (!claims) return null;
+        return JSON.parse(claims);
+    };
+
+    protected createLoginUrl(extraState: string = null, nonce: string = null): string {
+        nonce = nonce || this.createAndSaveNonce();
         let state = extraState ? nonce + ";" + extraState : nonce;
         let response_type = this.config.oidc ? "id_token+token" : "token";
 
@@ -103,10 +113,6 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
             url += "&resource=" + encodeURIComponent(this.resource);
         }
         
-        if (this.config.oidc) {
-            url += "&nonce=" + encodeURIComponent(nonce);
-        }
-        
         return url;
     };
 
@@ -121,7 +127,7 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         return nonce;
     };
 
-    logOut(noRedirect: boolean = false): void {
+    protected logOut(noRedirect: boolean = false): void {
         var id_token = this.getIdToken();
         this.config.storage.removeItem("access_token");
         this.config.storage.removeItem("id_token");
@@ -139,6 +145,44 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
                 + "&redirect_uri="
                 + encodeURIComponent(this.config.redirectUri);
         this.router.navigateByUrl(logoutUrl);
+    };
+
+    protected getFragment(): { [key: string]: string } {
+        if (window.location.hash.indexOf("#") === 0) {
+            return this.parseQueryString(window.location.hash.substr(1));
+        } else {
+            return {};
+        }
+    };
+
+    protected parseQueryString(queryString): { [key: string]: string } {
+        var data = {}, pairs, pair, separatorIndex, escapedKey, escapedValue, key, value;
+
+        if (queryString === null) return data;
+            
+        pairs = queryString.split("&");
+        for (var i = 0; i < pairs.length; i++) {
+            pair = pairs[i];
+            separatorIndex = pair.indexOf("=");
+
+            if (separatorIndex === -1) {
+                escapedKey = pair;
+                escapedValue = null;
+            } else {
+                escapedKey = pair.substr(0, separatorIndex);
+                escapedValue = pair.substr(separatorIndex + 1);
+            }
+
+            key = decodeURIComponent(escapedKey);
+            value = decodeURIComponent(escapedValue);
+
+            if (key.substr(0, 1) === '/')
+                key = key.substr(1);
+
+            data[key] = value;
+        }
+
+        return data;
     };
 
     protected storeAccessTokenResponse(accessToken: string, refreshToken: string, expiresIn: number): void {

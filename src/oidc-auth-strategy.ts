@@ -19,12 +19,22 @@ export class OIDCAuthStrategy extends BaseAuthStrategy<OAuthOIDCConfig> {
     public get userinfoEndpoint(): string { return this.fetchDocProp("userinfo_endpoint", "fallbackUserInfoEndpoint"); };
     public get issuer(): string { return this.fetchDocProp("issuer", "fallbackIssuer"); };
 
-    public constructor(http: Http, protected router: Router, _config: OAuthOIDCConfig) { super(http, router, _config); }
+    public constructor(http: Http, protected router: Router, _config: OAuthOIDCConfig)
+    {
+        super(http, router, _config);
+    }
 
     public initiateLoginFlow(options: OIDCFlowOptions = null): Promise<any> {
         var url = this.createLoginUrl((options && options.additionalState) || null);
         this.router.navigateByUrl(url);
 
         return new Promise((resolve, reject) => reject("This return value is unused in the OIDC flow."));
+    }
+
+    public createLoginUrl(extraState: string = undefined): string {
+        let nonce = this.createAndSaveNonce();
+        let url = super.createLoginUrl(extraState, nonce);
+        url += "&nonce=" + encodeURIComponent(nonce);
+        return url;
     }
 }

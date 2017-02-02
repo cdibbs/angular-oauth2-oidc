@@ -7,69 +7,30 @@ import {fromByteArray} from 'base64-js';
 import sha256 from 'fast-sha256';
 import * as nacl from 'tweetnacl-util';
 
-import { IAuthStrategy } from './i';
+import { IAuthStrategy, IOAuthService } from './i';
 import { BaseOAuthConfig, DiscoveryDocument } from './models';
 
 @Injectable()
-export class OAuthService {
+export class OAuthService implements IOAuthService {
     private _discoveryDoc: DiscoveryDocument;
     private discoveryDocumentLoadedSender: Observer<any>;
     public discoveryDocumentLoaded: boolean = false;
     public discoveryDocumentLoaded$: Observable<any>;
 
     public get strategy(): IAuthStrategy { return this._strategy; };
-    public get config(): BaseOAuthConfig { return this._config; };
+    public get config(): BaseOAuthConfig { return this.strategy.config; };
     public resource = "";
     public options: any;
     public state = "";
     public validationHandler: any;
     public dummyClientSecret: string;    
-    private _storage: Storage = localStorage;
-
-    public setStorage(storage: Storage) {
-        this._storage = storage;
-    }
     
-    constructor(private http: Http, private _config: BaseOAuthConfig, private _strategy: IAuthStrategy) {}
+    constructor(private http: Http, private _strategy: IAuthStrategy) {}
 
-    initiateLoginFlow(): Observable<any> { return this.strategy.initiateLoginFlow(); }
+    public initiateLoginFlow(): Promise<any> { return this.strategy.initiateLoginFlow(); }
 
-    refreshSession(): Promise<any> {
-        return new Promise((resolve, reject) => { 
-            let search = new URLSearchParams();
-            search.set('grant_type', 'refresh_token');
-            search.set('client_id', this.config.clientId);
-            search.set('scope', this.config.scope);
-            search.set('refresh_token', this._storage.getItem('refresh_token'));
-            
-            if (this.dummyClientSecret) {
-                search.set('client_secret', this.dummyClientSecret);
-            }
-
-            let headers = new Headers();
-            headers.set('Content-Type', 'application/x-www-form-urlencoded');
-
-            let params = search.toString();
-
-            this.http.post(this.tokenEndpoint, params, { headers }).map(r => r.json()).subscribe(
-                (tokenResponse) => {
-                    console.debug('refresh tokenResponse', tokenResponse);
-                    this.storeAccessTokenResponse(tokenResponse.access_token, tokenResponse.refresh_token, tokenResponse.expires_in);
-                    resolve(tokenResponse);
-                },
-                (err) => {
-                    console.error('Error performing password flow', err);
-                    reject(err);
-                }
-            );
-        });
-
-    }
-
-    initImplicitFlow(additionalState = "") {
-        location.href = this.createLoginUrl(additionalState);
-    };
-    
+    public refreshSession(): Promise<any> { return this.strategy.refreshSession(); }
+   
     callEventIfExists(options: any) {
                 if (options.onTokenReceived) {
             var tokenParams = { 
@@ -200,69 +161,18 @@ export class OAuthService {
             return true;
     }
     
-    getIdentityClaims() {
-        var claims = this._storage.getItem("id_token_claims_obj");
-        if (!claims) return null;
-        return JSON.parse(claims);
-    }
-    
+    getIdentityClaims(): any { return this.strategy.getIdentityClaims(); }    
     getIdToken(): string { return this.strategy.getIdToken(); }
     getAccessToken(): string { return this.strategy.getAccessToken(); }
     hasValidAccessToken(): boolean { return this.strategy.hasValidAccessToken(); }
     hasValidIdToken(): boolean { return this.strategy.hasValidIdToken(); }
 
     /**
-     * Calls the strategy's logout method.
-     * @param {boolean} noRedirect whether to redirect after deleting the session information from storage. Default: false.
+     * Logs out of the session by deleting our token storage. Optionally skips
+     * redirect, also. (warning: skipping the redirect means a user could still
+     * restart the session without re-entering the password, depending on the
+     * endpoint configuration).
+     * @param {boolean} noRedirect Whether to skip the redirect. Defaults to false.
      */
-    logOut(noRedirect: boolean = false): void { this.strategy.logout(noRedirect); };
-
-    createAndSaveNonce(): string {
-        var nonce = "";
-        const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-        for (var i = 0; i < 40; i++)
-            nonce += possible.charAt(Math.floor(Math.random() * possible.length));    
-
-        this._storage.setItem("nonce", nonce);
-        return nonce;
-    };
-
-    getFragment() {
-        if (window.location.hash.indexOf("#") === 0) {
-            return this.parseQueryString(window.location.hash.substr(1));
-        } else {
-            return {};
-        }
-    };
-
-    parseQueryString(queryString) {
-        var data = {}, pairs, pair, separatorIndex, escapedKey, escapedValue, key, value;
-
-        if (queryString === null) return data;
-            
-        pairs = queryString.split("&");
-        for (var i = 0; i < pairs.length; i++) {
-            pair = pairs[i];
-            separatorIndex = pair.indexOf("=");
-
-            if (separatorIndex === -1) {
-                escapedKey = pair;
-                escapedValue = null;
-            } else {
-                escapedKey = pair.substr(0, separatorIndex);
-                escapedValue = pair.substr(separatorIndex + 1);
-            }
-
-            key = decodeURIComponent(escapedKey);
-            value = decodeURIComponent(escapedValue);
-
-            if (key.substr(0, 1) === '/')
-                key = key.substr(1);
-
-            data[key] = value;
-        }
-
-        return data;
-    };
+    logOut(noRedirect: boolean = false): void { this.strategy.logOut(noRedirect); };
 }
