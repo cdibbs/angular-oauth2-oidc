@@ -22,7 +22,8 @@ export class OIDCAuthStrategy extends BaseAuthStrategy<OAuthOIDCConfig> {
     public constructor(http: Http, protected router: Router, _config: OAuthOIDCConfig) { super(http, router, _config); }
 
     public initiateLoginFlow(options: OIDCFlowOptions = null): Promise<any> {
-        location.href = this.createLoginUrl((options && options.additionalState) || null);
+        var url = this.createLoginUrl((options && options.additionalState) || null);
+        this.router.navigateByUrl(url);
 
         return new Promise((resolve, reject) => reject("This return value is unused in the OIDC flow."));
     }
