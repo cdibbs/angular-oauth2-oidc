@@ -1,9 +1,10 @@
 import { Http, URLSearchParams, Headers } from '@angular/http';
-import { Injectable } from '@angular/core';
+import { Injectable, Renderer } from '@angular/core';
 import { Observable, Observer } from 'rxjs';
 import { Router } from '@angular/router';
 
 import { BaseAuthStrategy } from './base-auth-strategy';
+import { CheckSessionIFrame } from './check-session-iframe';
 import { DiscoveryDocument, OAuthOIDCConfig, BaseOAuthConfig, OIDCFlowOptions } from './models';
 
 /**
@@ -13,16 +14,16 @@ import { DiscoveryDocument, OAuthOIDCConfig, BaseOAuthConfig, OIDCFlowOptions } 
  * https://en.wikipedia.org/wiki/OpenID_Connect
  */
 export class OIDCAuthStrategy extends BaseAuthStrategy<OAuthOIDCConfig> {
-    public get loginUrl(): string { return this.fetchDocProp("authorization_endpoint", "fallbackLoginUri"); };
-    public get logoutUrl(): string { return this.fetchDocProp("end_session_endpoint", "fallbackLogoutUri"); };
-    public get tokenEndpoint(): string { return this.fetchDocProp("token_endpoint", "fallbackTokenEndpoint"); };
-    public get userinfoEndpoint(): string { return this.fetchDocProp("userinfo_endpoint", "fallbackUserInfoEndpoint"); };
-    public get issuer(): string { return this.fetchDocProp("issuer", "fallbackIssuer"); };
-
-    public constructor(http: Http, protected router: Router, _config: OAuthOIDCConfig)
+    public constructor(
+        protected http: Http,
+        protected router: Router,
+        protected iframe: CheckSessionIFrame,
+        _config: OAuthOIDCConfig)
     {
         super(http, router, _config);
     }
+
+    public get checkSessionIFrameUri(): string { return this.fetchDocProp("check_session_iframe", "FallbackCheckSessionIFrame"); }
 
     public initiateLoginFlow(options: OIDCFlowOptions = null): Promise<any> {
         var url = this.createLoginUrl((options && options.additionalState) || null);
@@ -36,5 +37,9 @@ export class OIDCAuthStrategy extends BaseAuthStrategy<OAuthOIDCConfig> {
         let url = super.createLoginUrl(extraState, nonce);
         url += "&nonce=" + encodeURIComponent(nonce);
         return url;
+    }
+
+    public refreshSession(timeout: number = 30000): Observable<any> {
+        return this.iframe.navigate(this.checkSessionIFrameUri, timeout);
     }
 }

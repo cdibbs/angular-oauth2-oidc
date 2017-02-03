@@ -1,5 +1,6 @@
 {
   "name": "angular-oauth2-oidc",
+  "description": "An Angular2 library for authentication and authorization using OIDC and Password flow.",
   "version": "1.0.15",
   "scripts": {
     "lint": "tslint src/**/*.ts",

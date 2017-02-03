@@ -1,3 +1,4 @@
+import { ILogService } from '../i';
 /** Represents the basic configuration required for OAuthService. */
 export class BaseOAuthConfig {
     /** Which Storage mechanism to use. E.g., sessionStorage or localStorage (default). */
@@ -35,4 +36,7 @@ export class BaseOAuthConfig {
 
     /** Optional */
     public fallbackTokenEndpoint: string = null;
+
+    /** A logger matching the method signatures of console. Default: console. */
+    public log: ILogService = console;
 }

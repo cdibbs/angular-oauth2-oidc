@@ -9,7 +9,7 @@ import sha256 from 'fast-sha256';
 import * as nacl from 'tweetnacl-util';
 
 import { DiscoveryDocument, BaseOAuthConfig } from './models';
-import { IAuthStrategy } from './i';
+import { IAuthStrategy, ILogService } from './i';
 
 @Injectable()
 export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthStrategy {
@@ -28,6 +28,9 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
     public get config(): TConfig { return this._config; };
     public get loginUrl(): string { return this.fetchDocProp("authorization_endpoint", "fallbackLoginUri"); };
     public get logoutUrl(): string { return this.fetchDocProp("end_session_endpoint", "fallbackLogoutUri"); };
+    public get issuer(): string { return this.fetchDocProp("issuer", "fallbackIssuer"); };
+
+    protected get log(): ILogService { return this.config.log; };
 
     /**
      * Fetch the specified discovery document propery, or fallback to a value specified in the config.
@@ -52,7 +55,7 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
                     resolve(doc);
                 },
                 (err) => {
-                    console.error('error loading dicovery document', err);
+                    this.log.error('error loading dicovery document', err);
                     reject(err);
                 }
             );
@@ -63,7 +66,7 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         throw new Error("This must be implemented in derived classes.");
     }
 
-    public refreshSession(): Promise<any> {
+    public refreshSession(timeout: number = 30000): Observable<any> {
         throw new Error("This must be implemented in derived classes.");
     }
 
@@ -86,7 +89,116 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         return false;
     };
 
-    protected getIdentityClaims(): any {
+    tryLogin(options) {        
+        options = options || { };        
+        var parts = this.getFragment();
+        var accessToken = parts["access_token"];
+        var idToken = parts["id_token"];
+        var state = parts["state"];        
+        var oidcSuccess = false;
+
+        if (!accessToken || !state) return false;
+        if (this.config.oidc && !idToken) return false;
+
+        var savedNonce = this.config.storage.getItem("nonce");
+        var stateParts = state.split(';');
+        var nonceInState = stateParts[0];
+
+        if (savedNonce === nonceInState) {            
+            this.storeAccessTokenResponse(accessToken, null, parseInt(parts['expires_in']));
+            if (stateParts.length > 1)
+                this.config.storage.setItem("state", stateParts[1]);
+        } else {
+            return false;
+        }        
+
+        if (this.config.oidc && !this.processIdToken(idToken, accessToken))
+            return false;
+        
+        if (options.validationHandler) {            
+            options
+                .validationHandler({accessToken: accessToken, idToken: idToken})
+                .then(() => {
+                    this.callEventIfExists(options);
+                })
+                .catch(function(reason) {
+                    this.log.error('Error validating tokens');
+                    this.log.error(reason);
+                })
+        }
+        else {
+            this.callEventIfExists(options);
+        }
+        
+        if (this.config.clearHashAfterLogin) location.hash = '';        
+        return true;
+    };
+    
+    processIdToken(idToken, accessToken) {
+            var tokenParts = idToken.split(".");
+            var claimsBase64 = tokenParts[1] + "====".substr(0, tokenParts[1].length % 4);
+            var claimsJson = Base64.decode(claimsBase64);
+            var claims = JSON.parse(claimsJson);
+            var savedNonce = this.config.storage.getItem("nonce");
+            
+            if (claims.aud !== this.config.clientId) {
+                this.log.warn("Wrong audience: " + claims.aud);
+                return false;
+            }
+
+            if (this.issuer && claims.iss !== this.issuer) {
+                this.log.warn("Wrong issuer: " + claims.iss);
+                return false;
+            }
+
+            if (claims.nonce !== savedNonce) {
+                this.log.warn("Wrong nonce: " + claims.nonce);
+                return false;
+            }
+            
+            if (accessToken && !this.checkAtHash(accessToken, claims)) {
+                this.log.warn("Wrong at_hash");
+                return false;
+            }
+            
+            // Das Prüfen des Zertifikates wird der Serverseite überlassen!
+
+            var now = Date.now();
+            var issuedAtMSec = claims.iat * 1000;
+            var expiresAtMSec = claims.exp * 1000;
+            
+            var tenMinutesInMsec = 1000 * 60 * 10;
+
+            if (issuedAtMSec - tenMinutesInMsec >= now  || expiresAtMSec + tenMinutesInMsec <= now) {
+                this.log.warn("Token has been expired");
+                this.log.warn({
+                    now: now,
+                    issuedAtMSec: issuedAtMSec,
+                    expiresAtMSec: expiresAtMSec
+                });
+                return false;
+            }
+
+            this.config.storage.setItem("id_token", idToken);
+            this.config.storage.setItem("id_token_claims_obj", claimsJson);
+            this.config.storage.setItem("id_token_expires_at", "" + expiresAtMSec);
+                       
+            return true;
+    }
+
+    callEventIfExists(options: any) {
+                if (options.onTokenReceived) {
+            var tokenParams = { 
+                idClaims: this.identityClaims,
+                idToken: this.getIdToken(),
+                accessToken: this.getAccessToken(),
+                state: this.config.storage.getItem("state")
+            };
+            options.onTokenReceived(tokenParams);
+        }
+    }
+
+    protected get identityClaims(): any {
         var claims = this.config.storage.getItem("id_token_claims_obj");
         if (!claims) return null;
         return JSON.parse(claims);
@@ -211,8 +323,8 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         var atHash = tokenHashBase64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 
         if (atHash != claimsAtHash) {
-            console.warn("exptected at_hash: " + atHash);    
-            console.warn("actual at_hash: " + claimsAtHash);
+            this.log.warn("exptected at_hash: " + atHash);    
+            this.log.warn("actual at_hash: " + claimsAtHash);
         }       
         return (atHash == claimsAtHash);
     }    

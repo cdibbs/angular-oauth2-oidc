@@ -4,11 +4,11 @@ export interface IAuthStrategy {
     config: BaseOAuthConfig;
     loginUrl: string;
     logoutUrl: string;
+    identityClaims: any;
 
     loadDiscoveryDocument(fullUrl: string): Promise<any>;
     getIdToken(): string;
     getAccessToken(): string;
-    getIdentityClaims(): any;
     hasValidAccessToken(): boolean;
     hasValidIdToken(): boolean;
 
