@@ -1,25 +1,33 @@
-import { Renderer } from '@angular/core';
-import { ILogService } from './i';
-import { Observable, Observer, Subscription } from 'rxjs';
+import { Inject, Injectable, Renderer } from '@angular/core';
+import { ILogService, LogServiceToken } from './i';
+import { Observable, Observer, Subscription, Subscriber } from 'rxjs';
 
 // Inspired by, and thanks to: https://github.com/IdentityModel/oidc-client-js/blob/dev/src/IFrameWindow.js
+@Injectable()
 export class CheckSessionIFrame {
     private documentLoaded$: Observable<any>;
-    private documentLoadedSender: Observer<any>;
+    private documentLoadedSubscriber: Subscriber<any>;
     private timer: Observable<any>;
     private timerSubscription: Subscription;
     private iframe: HTMLIFrameElement;
     private removeWindowListener: Function;
 
-    constructor(private log: ILogService, private renderer: Renderer) {
-        this.removeWindowListener = renderer.listenGlobal("window", "message", this.message);
-        this.documentLoaded$ = Observable.create((sender: Observer<any>) => {
-            this.documentLoadedSender = sender;
-        }).publish().connect();
+    constructor(
+        @Inject(LogServiceToken) private log: ILogService,
+        private renderer: Renderer)
+    {
+        this.documentLoaded$ = new Observable((subscriber: Subscriber<any>) => {
+            console.log(subscriber);
+            this.documentLoadedSubscriber = subscriber;
+        }).share();
         this.setupIFrame();
     }
 
     public navigate(url: string, timeout: number): Observable<any>  {
+        if (!this.removeWindowListener) {
+            this.removeWindowListener = this.setupGlobalListener("window", "message", this.message);
+        }
+        console.log("what is this");
         this.log.debug(`${this.constructor.name}.${this.message.name}`);
         this.timer = Observable.timer(timeout);
         this.timerSubscription = this.timer.subscribe(this.timeout);
@@ -28,8 +36,8 @@ export class CheckSessionIFrame {
     }
 
     protected timeout(timePassed: number): void {
+        this.documentLoadedSubscriber.error(`Request timed out after ${timePassed}ms.`);
         this.cleanup();
-        this.documentLoadedSender.error(`Request timed out after ${timePassed}ms.`);
     }
 
     protected success(data): void {
@@ -56,5 +64,9 @@ export class CheckSessionIFrame {
 
     protected removeIFrame(): void {
         window.document.body.removeChild(this.iframe);
+    }
+
+    protected setupGlobalListener(target: string, name: string, callback: Function): Function {
+        return this.renderer.listenGlobal(target, name, callback);
     }
 }

@@ -1,7 +1,8 @@
 /* tslint:disable:no-unused-variable */
 
 import { TestBed, async, inject } from '@angular/core/testing';
-import { Provider } from '@angular/core';
+import { ClassProvider, ValueProvider, Renderer } from '@angular/core';
+import { LogServiceToken } from './i';
 
 import { CheckSessionIFrame } from './check-session-iframe';
 
@@ -11,7 +12,9 @@ describe('CheckSessionIFrame', () => {
       imports: [
       ],
       providers: [
-        <Provider>{ provide: CheckSessionIFrame, useClass: CheckSessionIFrame }
+        <ValueProvider>{ provide: LogServiceToken, useValue: console },
+        <ValueProvider>{ provide: Renderer, useValue: null },
+        <ClassProvider>{ provide: CheckSessionIFrame, useClass: CheckSessionIFrame }
       ]
     });
     TestBed.compileComponents();
@@ -20,4 +23,16 @@ describe('CheckSessionIFrame', () => {
   it('should create the service', inject([CheckSessionIFrame], (service: CheckSessionIFrame) => {
     expect(service).toBeTruthy();
   }));
+
+  describe('navigate', () => {
+    fit('should timeout after specified period.', (done) => { inject([CheckSessionIFrame], (service: CheckSessionIFrame) => {
+        //service["setupGlobalListener"] = function(target: string, name: string, callback: Function): Function { return () => {}; };
+        spyOn(service, "setupGlobalListener");
+        service.navigate("", 1).subscribe(
+          (v: any) => { fail("Function success method called. Should be timeout."); },
+          (e: any) => { expect(e).toContain("timed out"); },
+          () => { done(); }
+        );
+    })(); });
+  });
 });
