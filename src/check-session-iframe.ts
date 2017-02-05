@@ -27,10 +27,9 @@ export class CheckSessionIFrame {
         if (!this.removeWindowListener) {
             this.removeWindowListener = this.setupGlobalListener("window", "message", this.message);
         }
-        console.log("what is this");
         this.log.debug(`${this.constructor.name}.${this.message.name}`);
         this.timer = Observable.timer(timeout);
-        this.timerSubscription = this.timer.subscribe(this.timeout);
+        this.timerSubscription = this.timer.subscribe(((self) => (t: number) => self.timeout.call(self, t))(this));
         this.iframe.src = url;
         return this.documentLoaded$;
     }

@@ -25,14 +25,17 @@ describe('CheckSessionIFrame', () => {
   }));
 
   describe('navigate', () => {
-    fit('should timeout after specified period.', (done) => { inject([CheckSessionIFrame], (service: CheckSessionIFrame) => {
-        //service["setupGlobalListener"] = function(target: string, name: string, callback: Function): Function { return () => {}; };
-        spyOn(service, "setupGlobalListener");
-        service.navigate("", 1).subscribe(
-          (v: any) => { fail("Function success method called. Should be timeout."); },
-          (e: any) => { expect(e).toContain("timed out"); },
-          () => { done(); }
-        );
-    })(); });
+    let iframe: CheckSessionIFrame;
+    beforeEach(() => {
+        inject([CheckSessionIFrame], (service: CheckSessionIFrame) => { iframe = service; })();
+    });
+
+    it('should timeout after specified period.', (done) => {
+      iframe["setupGlobalListener"] = function() { return () => {}; };
+      iframe.navigate("", 1).subscribe(
+        (v: any) => { fail("Function success method called. Should be timeout."); done(); },
+        (e: any) => { expect(e).toContain("timed out"); done();},
+      );
+    });
   });
 });
