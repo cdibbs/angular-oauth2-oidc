@@ -19,6 +19,8 @@ export class BaseOAuthConfig {
     /** Whether to clear everything after the # after login. Defaults to true.*/
     public clearHashAfterLogin: boolean = true;
 
+    public resource: string = null;
+
     /**
      * Optional, but recommended. The URI of the auth endpoint discovery document. You must provide
      * either this, or the fallback* config options.

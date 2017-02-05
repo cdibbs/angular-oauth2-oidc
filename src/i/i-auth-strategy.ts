@@ -1,4 +1,5 @@
 import { BaseOAuthConfig } from '../models';
+import { Observable } from 'rxjs';
 
 export interface IAuthStrategy {
     config: BaseOAuthConfig;
@@ -35,5 +36,5 @@ export interface IAuthStrategy {
      * Does not require user intervention.
      * @returns {Promise<any>} A promise for a token response from the endpoint.
      */
-    refreshSession(): Promise<any>;
+    refreshSession(timeout?: number): Observable<any>;
 }

@@ -2,7 +2,7 @@ import { NgModule, ModuleWithProviders, ClassProvider, ValueProvider } from "@an
 import { CommonModule } from "@angular/common";
 
 import { OAuthService } from './src/oauth-service';
-import { OAuthConfig } from './src/models';
+import { BaseOAuthConfig } from './src/models';
 
 export * from './src/oauth-service';
 export * from './src/models';
@@ -18,11 +18,11 @@ export * from './src/models/i';
   ]
 })
 export class OAuthModule {
-  static forRoot(config: OAuthConfig): ModuleWithProviders {
+  static forRoot(config: BaseOAuthConfig): ModuleWithProviders {
     return {
       ngModule: OAuthModule,
       providers: [
-        <ValueProvider>{ provide: OAuthConfig, useValue: OAuthConfig },
+        <ValueProvider>{ provide: BaseOAuthConfig, useValue: config },
         <ClassProvider>{ provide: OAuthService, useClass: OAuthService }
       ]
     };

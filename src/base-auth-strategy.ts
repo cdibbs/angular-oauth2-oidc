@@ -198,7 +198,7 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         }
     }
 
-    protected get identityClaims(): any {
+    public get identityClaims(): string {
         var claims = this.config.storage.getItem("id_token_claims_obj");
         if (!claims) return null;
         return JSON.parse(claims);
@@ -222,7 +222,7 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
                     + encodeURIComponent(this.config.scope);
 
         if (this.config.resource) {
-            url += "&resource=" + encodeURIComponent(this.resource);
+            url += "&resource=" + encodeURIComponent(this.config.resource);
         }
         
         return url;
@@ -239,7 +239,7 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         return nonce;
     };
 
-    protected logOut(noRedirect: boolean = false): void {
+    public logOut(noRedirect: boolean = false): void {
         var id_token = this.getIdToken();
         this.config.storage.removeItem("access_token");
         this.config.storage.removeItem("id_token");
