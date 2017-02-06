@@ -1,13 +1,14 @@
 import { Http } from '@angular/http';
-import { Injectable } from '@angular/core';
+import { Injectable, Inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { IAuthStrategy, IOAuthService } from './i';
+import { BaseAuthStrategy } from './base-auth-strategy';
 import { BaseOAuthConfig } from './models';
 
 @Injectable()
-export class OAuthService implements IOAuthService {
-    public get strategy(): IAuthStrategy { return this._strategy; };
+export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
+    public get strategy(): IAuthStrategy<T> { return this._strategy; };
     public get config(): BaseOAuthConfig { return this.strategy.config; };
     public resource = '';
     public options: any;
@@ -15,7 +16,9 @@ export class OAuthService implements IOAuthService {
     public validationHandler: any;
     public dummyClientSecret: string;
 
-    constructor(private http: Http, private _strategy: IAuthStrategy) {}
+    constructor(
+        private http: Http,
+        private _strategy: BaseAuthStrategy<T>) {}
 
     public initiateLoginFlow(): Promise<any> { return this.strategy.initiateLoginFlow(); }
 

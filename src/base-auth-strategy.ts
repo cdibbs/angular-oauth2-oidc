@@ -12,7 +12,7 @@ import { DiscoveryDocument, BaseOAuthConfig } from './models';
 import { IAuthStrategy, ILogService } from './i';
 
 @Injectable()
-export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthStrategy {
+export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthStrategy<TConfig> {
     protected _discoveryDoc: DiscoveryDocument;
     protected discoveryDocumentLoadedSender: Observer<any>;
     public discoveryDocumentLoaded: boolean = false;

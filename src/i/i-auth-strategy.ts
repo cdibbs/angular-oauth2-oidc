@@ -1,7 +1,7 @@
 import { BaseOAuthConfig } from '../models';
 import { Observable } from 'rxjs';
 
-export interface IAuthStrategy {
+export interface IAuthStrategy<T extends BaseOAuthConfig> {
     config: BaseOAuthConfig;
     loginUrl: string;
     logoutUrl: string;

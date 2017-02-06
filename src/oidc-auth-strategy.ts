@@ -13,6 +13,7 @@ import { DiscoveryDocument, OAuthOIDCConfig, BaseOAuthConfig, OIDCFlowOptions } 
  * information, as configured. More information can be found, here:
  * https://en.wikipedia.org/wiki/OpenID_Connect
  */
+@Injectable()
 export class OIDCAuthStrategy extends BaseAuthStrategy<OAuthOIDCConfig> {
     public constructor(
         protected http: Http,

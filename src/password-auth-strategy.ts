@@ -12,6 +12,7 @@ import { DiscoveryDocument, BaseOAuthConfig, OAuthPasswordConfig, PasswordFlowOp
  * information, as configured. More information can be found, here:
  * https://en.wikipedia.org/wiki/OpenID_Connect
  */
+@Injectable()
 export class PasswordAuthStrategy extends BaseAuthStrategy<OAuthPasswordConfig> {
     public get loginUrl(): string { return this.fetchDocProp("authorization_endpoint", "fallbackLoginUri"); };
     public get logoutUrl(): string { return this.fetchDocProp("end_session_endpoint", "fallbackLogoutUri"); };
