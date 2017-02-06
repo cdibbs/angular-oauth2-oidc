@@ -7,10 +7,10 @@ import {APP_BASE_HREF} from '@angular/common';
 import { OAuthModule } from '../';
 import { CheckSessionIFrame } from '../src/check-session-iframe';
 import { OIDCAuthStrategy } from '../src/oidc-auth-strategy';
-import { OAuthOIDCConfig } from '../src/models/oauth-oidc-config';
+import { DiscoveryDocument, OAuthOIDCConfig } from '../src/models';
 import { LogServiceToken } from '../src/i';
 
-describe('BaseAuthStrategy', function() {
+describe('OIDCAuthStrategy', function() {
   let config = new OAuthOIDCConfig();
   config.discoveryDocumentUri = "http://localhost:3000";
   config.fallbackIssuer = "http://localhost:3000";
@@ -33,9 +33,27 @@ describe('BaseAuthStrategy', function() {
 
   it('should load the discovery document.', (done) => {
     inject([OIDCAuthStrategy], (strategy: OIDCAuthStrategy) => {
-      strategy.loadDiscoveryDocument().then((d) => {
-        console.log(d);
+      strategy.loadDiscoveryDocument().then((d: DiscoveryDocument) => {
         expect(d).toBeDefined();
+        expect(strategy.loginUrl).toBe(d.authorization_endpoint);
+        expect(strategy.logoutUrl).toBe(d.end_session_endpoint);
+        expect(strategy.issuer).toBe(d.issuer);
+        expect(strategy.checkSessionIFrameUri).toBe(d.check_session_iframe);
+        done();
+      });
+    })();
+  });
+
+  it('should refresh session.', (done) => {
+    inject([OIDCAuthStrategy], (strategy: OIDCAuthStrategy) => {
+      strategy.loadDiscoveryDocument().then((d: DiscoveryDocument) => {
+        expect(d).toBeDefined();
+        return strategy.refreshSession(1000).toPromise();
+      }).then((r) => {
+        console.log("refresh response: ", r);
+        done();
+      }).catch((e) => { 
+        fail(`Caught exception refreshing session: ${e}.`);
         done();
       });
     })();

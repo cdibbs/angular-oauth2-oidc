@@ -1,4 +1,4 @@
-import { BaseOAuthConfig } from '../models';
+import { BaseOAuthConfig, DiscoveryDocument } from '../models';
 import { Observable } from 'rxjs';
 
 export interface IAuthStrategy<T extends BaseOAuthConfig> {
@@ -7,7 +7,7 @@ export interface IAuthStrategy<T extends BaseOAuthConfig> {
     logoutUrl: string;
     identityClaims: any;
 
-    loadDiscoveryDocument(fullUrl: string): Promise<any>;
+    loadDiscoveryDocument(fullUrl: string): Promise<DiscoveryDocument>;
     getIdToken(): string;
     getAccessToken(): string;
     hasValidAccessToken(): boolean;

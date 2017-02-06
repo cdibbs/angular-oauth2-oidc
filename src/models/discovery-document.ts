@@ -14,4 +14,6 @@ export class DiscoveryDocument {
     public token_endpoint: string;
 
     public userinfo_endpoint: string;
+
+    public check_session_iframe: string;
 }

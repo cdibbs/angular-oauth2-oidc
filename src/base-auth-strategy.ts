@@ -36,10 +36,10 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
      * Fetch the specified discovery document propery, or fallback to a value specified in the config.
      */
     protected fetchDocProp(prop: string, fallbackKey: string): string {
-        return (this.discoveryDocumentLoaded && this._discoveryDoc["prop"]) || this._config[fallbackKey];
+        return (this.discoveryDocumentLoaded && this._discoveryDoc[prop]) || this._config[fallbackKey];
     }
 
-    loadDiscoveryDocument(fullUrl: string = null): Promise<any> {
+    loadDiscoveryDocument(fullUrl: string = null): Promise<DiscoveryDocument> {
         return new Promise((resolve, reject) => {
             if (!fullUrl) {
                 if (! this.config.fallbackIssuer)

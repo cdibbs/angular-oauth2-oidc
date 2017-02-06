@@ -47,7 +47,7 @@ export class CheckSessionIFrame {
     private cleanup(): void {
         this.timerSubscription.unsubscribe();
         this.removeWindowListener();
-        this.removeIFrame
+        this.removeIFrame();
     }
 
     protected message(e): void {
