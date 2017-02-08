@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 
 import { BaseAuthStrategy } from './base-auth-strategy';
 import { CheckSessionIFrame } from './check-session-iframe';
-import { DiscoveryDocument, OAuthOIDCConfig, BaseOAuthConfig, OIDCFlowOptions } from './models';
+import { DiscoveryDocument, OIDCConfig, BaseOAuthConfig, OIDCFlowOptions } from './models';
 
 /**
  * Represents an OIDC authentication strategy.
@@ -14,12 +14,12 @@ import { DiscoveryDocument, OAuthOIDCConfig, BaseOAuthConfig, OIDCFlowOptions } 
  * https://en.wikipedia.org/wiki/OpenID_Connect
  */
 @Injectable()
-export class OIDCAuthStrategy extends BaseAuthStrategy<OAuthOIDCConfig> {
+export class OIDCAuthStrategy extends BaseAuthStrategy<OIDCConfig> {
     public constructor(
         protected http: Http,
         protected router: Router,
         protected iframe: CheckSessionIFrame,
-        _config: OAuthOIDCConfig)
+        _config: OIDCConfig)
     {
         super(http, router, _config);
     }

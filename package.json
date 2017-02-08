@@ -9,8 +9,7 @@
     "pree2e": "webdriver-manager update --standalone false --gecko false",
     "test-oauth2": "ts-node ./e2e/test-oidc-server.ts",
     "integ-test": "node node_modules/karma/bin/karma start e2e/karma.conf.js --auto-watch",
-    "e2e": "npm-run-all --parallel test-oauth2 integ-test" ,
-    "prepublish": "tsc",
+    "e2e": "npm-run-all --parallel test-oauth2 integ-test",
     "tsc": "tsc -p src/"
   },
   "repository": {
@@ -38,6 +37,7 @@
     "base64-js": "^1.2.0",
     "fast-sha256": "^1.0.0",
     "js-base64": "^2.1.9",
+    "moment": "^2.17.1",
     "tweetnacl-util": "^0.13.5"
   },
   "devDependencies": {

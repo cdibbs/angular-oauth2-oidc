@@ -6,7 +6,7 @@ import { OAuthService } from './src/oauth-service';
 import { BaseAuthStrategy } from './src/base-auth-strategy';
 import { OIDCAuthStrategy } from './src/oidc-auth-strategy';
 import { PasswordAuthStrategy } from './src/password-auth-strategy';
-import { BaseOAuthConfig, OAuthOIDCConfig, OAuthPasswordConfig } from './src/models';
+import { BaseOAuthConfig, OIDCConfig, PasswordConfig } from './src/models';
 
 export * from './src/oauth-service';
 export * from './src/models';

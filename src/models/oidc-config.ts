@@ -1,5 +1,5 @@
 import { BaseOAuthConfig } from './base-oauth-config';
 
-export class OAuthOIDCConfig extends BaseOAuthConfig {
+export class OIDCConfig extends BaseOAuthConfig {
     
 }

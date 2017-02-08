@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, Observer } from 'rxjs';
 
 import { BaseAuthStrategy } from './base-auth-strategy';
-import { DiscoveryDocument, BaseOAuthConfig, OAuthPasswordConfig, PasswordFlowOptions } from './models';
+import { DiscoveryDocument, BaseOAuthConfig, PasswordConfig, PasswordFlowOptions } from './models';
 
 /**
  * Represents an OIDC authentication strategy.
@@ -13,7 +13,7 @@ import { DiscoveryDocument, BaseOAuthConfig, OAuthPasswordConfig, PasswordFlowOp
  * https://en.wikipedia.org/wiki/OpenID_Connect
  */
 @Injectable()
-export class PasswordAuthStrategy extends BaseAuthStrategy<OAuthPasswordConfig> {
+export class PasswordAuthStrategy extends BaseAuthStrategy<PasswordConfig> {
     public get loginUrl(): string { return this.fetchDocProp("authorization_endpoint", "fallbackLoginUri"); };
     public get logoutUrl(): string { return this.fetchDocProp("end_session_endpoint", "fallbackLogoutUri"); };
     public get tokenEndpoint(): string { return this.fetchDocProp("token_endpoint", "fallbackTokenEndpoint"); };
@@ -24,7 +24,7 @@ export class PasswordAuthStrategy extends BaseAuthStrategy<OAuthPasswordConfig> 
     private refreshLoaded$: Observable<any>;
     private refreshLoadedSender: Observer<any>;
 
-    public constructor(http: Http, protected router: Router, _config: OAuthPasswordConfig) {
+    public constructor(http: Http, protected router: Router, _config: PasswordConfig) {
         super(http, router, _config);
         this.refreshLoaded$ = Observable.create((sender: Observer<any>) => {
             this.refreshLoadedSender = sender;

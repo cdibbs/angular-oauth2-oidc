@@ -1,7 +1,7 @@
 import { IAuthStrategy } from './i-auth-strategy';
-import { OAuthOIDCConfig } from '../models';
+import { OIDCConfig } from '../models';
 
-export interface IOIDCAuthStrategy extends IAuthStrategy<OAuthOIDCConfig> {
+export interface IOIDCAuthStrategy extends IAuthStrategy<OIDCConfig> {
     tokenEndpoint: string;
     userinfoEndpoint: string;
     issuer: string;

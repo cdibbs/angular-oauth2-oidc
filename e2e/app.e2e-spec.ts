@@ -7,11 +7,11 @@ import {APP_BASE_HREF} from '@angular/common';
 import { OAuthModule } from '../';
 import { CheckSessionIFrame } from '../src/check-session-iframe';
 import { OIDCAuthStrategy } from '../src/oidc-auth-strategy';
-import { DiscoveryDocument, OAuthOIDCConfig } from '../src/models';
+import { DiscoveryDocument, OIDCConfig } from '../src/models';
 import { LogServiceToken } from '../src/i';
 
 describe('OIDCAuthStrategy', function() {
-  let config = new OAuthOIDCConfig();
+  let config = new OIDCConfig();
   config.discoveryDocumentUri = "http://localhost:3000";
   config.fallbackIssuer = "http://localhost:3000";
 
@@ -22,7 +22,7 @@ describe('OIDCAuthStrategy', function() {
         OAuthModule.forRoot(config)
       ],
       providers: [
-        <ValueProvider>{ provide: OAuthOIDCConfig, useValue: config },
+        <ValueProvider>{ provide: OIDCConfig, useValue: config },
         <ValueProvider>{ provide: APP_BASE_HREF, useValue : '/' },
         <ValueProvider>{ provide: LogServiceToken, useValue: console },
         <ClassProvider>{ provide: CheckSessionIFrame, useClass: CheckSessionIFrame },

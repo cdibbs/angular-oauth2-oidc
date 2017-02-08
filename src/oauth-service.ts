@@ -1,6 +1,7 @@
 import { Http } from '@angular/http';
 import { Injectable, Inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import * as moment from 'moment';
 
 import { IAuthStrategy, IOAuthService } from './i';
 import { BaseAuthStrategy } from './base-auth-strategy';
@@ -15,15 +16,19 @@ export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
     public state = '';
     public validationHandler: any;
     public dummyClientSecret: string;
+    public lastBumped: moment.Moment;
 
     constructor(
         private http: Http,
-        private _strategy: BaseAuthStrategy<T>) {}
+        private _strategy: BaseAuthStrategy<T>) {
+            this.lastBumped = moment();
+        }
 
+    /** Notify of a user interaction (for the sake of preserving a session). */
+    public bump(): void { this.lastBumped = moment(); }
     public initiateLoginFlow(): Promise<any> { return this.strategy.initiateLoginFlow(); }
-
     public refreshSession(): Observable<any> { return this.strategy.refreshSession(); }
-
+    private get _window(): Window { return window; }
     get identityClaims(): any { return this.strategy.identityClaims; }
     get idToken(): string { return this.strategy.getIdToken(); }
     get accessToken(): string { return this.strategy.getAccessToken(); }

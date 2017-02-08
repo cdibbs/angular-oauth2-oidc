@@ -1,7 +1,7 @@
 import { BaseFlowOptions } from './base-flow-options';
-import { OAuthPasswordConfig } from './oauth-password-config';
+import { PasswordConfig } from './password-config';
 
-export class PasswordFlowOptions extends BaseFlowOptions<OAuthPasswordConfig> {
+export class PasswordFlowOptions extends BaseFlowOptions<PasswordConfig> {
     public Username: string;
     public Password: string;
     public autoLoadUserProfile: boolean = false;

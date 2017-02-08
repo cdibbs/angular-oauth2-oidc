@@ -1,6 +1,6 @@
 import { BaseFlowOptions } from './base-flow-options';
-import { OAuthOIDCConfig } from './oauth-oidc-config';
+import { OIDCConfig } from './oidc-config';
 
-export class OIDCFlowOptions extends BaseFlowOptions<OAuthOIDCConfig> {
+export class OIDCFlowOptions extends BaseFlowOptions<OIDCConfig> {
     
 }

@@ -1,7 +1,7 @@
 import { IAuthStrategy } from './i-auth-strategy';
-import { OAuthPasswordConfig } from '../models';
+import { PasswordConfig } from '../models';
 
-export interface IBasicAuthStrategy extends IAuthStrategy<OAuthPasswordConfig> {
+export interface IBasicAuthStrategy extends IAuthStrategy<PasswordConfig> {
     tokenEndpoint: string;
     userinfoEndpoint: string;
     issuer: string;

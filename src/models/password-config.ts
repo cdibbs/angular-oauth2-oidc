@@ -1,6 +1,6 @@
 import { BaseOAuthConfig } from './base-oauth-config';
 
-export class OAuthPasswordConfig extends BaseOAuthConfig {
+export class PasswordConfig extends BaseOAuthConfig {
     /** Whether to immediately load the profile from the user endpoint following successful login. */
     public autoLoadUserProfile: boolean = true;
 
