@@ -1,6 +1,9 @@
 import { BaseOAuthConfig } from '../models/base-oauth-config';
 import { DiscoveryDocument } from '../models/discovery-document';
 import { Observable } from 'rxjs';
+import { BaseFlowOptions } from '../models';
+
+import { IJWT } from '../models/i';
 
 export interface IAuthStrategy {
     kind: string;
@@ -25,12 +28,19 @@ export interface IAuthStrategy {
 
     /**
      * Initiates the login process for this strategy. If the strategy
-     * returns a Promise for a user profile, so will this method. Otherwise, it returns
-     * a rejected promise that should be ignored.
+     * returns a Promise for a user profile, so will this method. Otherwise, with the
+     * OIDC flow, either a redirect will occur, or a rejected promise will be returned.
      * @param {BaseFlowOptions} options Additional state and options for the given strategy.
      * @returns A promise for a user profile.
      */
-    initiateLoginFlow(): Promise<any>;
+    initiateLoginFlow<T extends BaseOAuthConfig>(options?: BaseFlowOptions<T>): Promise<any>;
+
+    /**
+     * If the auth strategy required a redirect (e.g., OIDC), calling this upon
+     * return will complete the login process and return a decoded JSON Web Token.
+     * @returns A promise for a decoded JSON Web Token.
+     */
+    completeLoginFlow(): Promise<IJWT>;
 
     /**
      * Refreshes the existing session by asynchronously communicating with the configured endpoint.

@@ -2,6 +2,7 @@ import { Http, URLSearchParams, Headers, RequestOptionsArgs } from '@angular/htt
 import { DOCUMENT } from '@angular/platform-browser';
 import { Injectable, Inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { JwtHelper } from 'angular2-jwt';
 import { Observable, Observer } from 'rxjs';
 
 
@@ -32,8 +33,9 @@ export class PasswordAuthStrategy extends BaseAuthStrategy<PasswordConfig> {
         protected http: Http,
         protected router: Router,
         protected _config: BaseOAuthConfig,
+        protected jwt: JwtHelper,
         @Inject(DOCUMENT) protected document: any) {
-        super(http, router, _config, document);
+        super(http, router, _config, jwt, document);
         this.refreshLoaded$ = Observable.create((sender: Observer<any>) => {
             this.refreshLoadedSender = sender;
         }).publish().connect();

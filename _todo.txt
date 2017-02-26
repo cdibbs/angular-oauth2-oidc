@@ -1,0 +1,2 @@
+1. Namespace our storage usage to avoid collisions with other libraries.
+2. Refactor the way we manage storage (should not be on config obj)

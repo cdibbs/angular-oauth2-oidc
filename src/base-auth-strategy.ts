@@ -100,9 +100,8 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         return false;
     };
 
-    public completeLoginFlow(options): Promise<IJWT> {        
-        return new Promise((resolve, reject) => {
-            options = options || { };        
+    public completeLoginFlow(): Promise<IJWT> {        
+        return new Promise((resolve, reject) => {     
             let parts = this.getFragment();
             let accessToken = parts["access_token"];
             let idToken = parts["id_token"];
@@ -137,24 +136,9 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
                 reject(validationResult.Message);
                 return;
             }
-            
-            if (options.validationHandler) {            
-                options
-                    .validationHandler({accessToken: accessToken, idToken: idToken})
-                    .then(() => {
-                        this.callEventIfExists(options);
-                    })
-                    .catch(function(reason) {
-                        this.log.error('Error validating tokens');
-                        this.log.error(reason);
-                    })
-            }
-            else {
-                this.callEventIfExists(options);
-            }
-            
+                  
             if (this.config.clearHashAfterLogin) location.hash = '';        
-            resolve()
+            resolve(this.jwt.decodeToken(idToken));
         });
     };
     
@@ -187,18 +171,6 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         this.config.storage.setItem("id_token_expires_at", "" + this.jwt.getTokenExpirationDate(idToken));
                     
         return TokenValidationResult.Ok;
-    }
-
-    callEventIfExists(options: any) {
-                if (options.onTokenReceived) {
-            var tokenParams = { 
-                idClaims: this.identityClaims,
-                idToken: this.getIdToken(),
-                accessToken: this.getAccessToken(),
-                state: this.config.storage.getItem("state")
-            };
-            options.onTokenReceived(tokenParams);
-        }
     }
 
     public get identityClaims(): string {
