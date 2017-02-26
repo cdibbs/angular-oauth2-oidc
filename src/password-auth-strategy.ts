@@ -1,7 +1,9 @@
 import { Http, URLSearchParams, Headers, RequestOptionsArgs } from '@angular/http';
-import { Injectable } from '@angular/core';
+import { DOCUMENT } from '@angular/platform-browser';
+import { Injectable, Inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, Observer } from 'rxjs';
+
 
 import { BaseAuthStrategy } from './base-auth-strategy';
 import { DiscoveryDocument, BaseOAuthConfig, PasswordConfig, PasswordFlowOptions } from './models';
@@ -14,6 +16,8 @@ import { DiscoveryDocument, BaseOAuthConfig, PasswordConfig, PasswordFlowOptions
  */
 @Injectable()
 export class PasswordAuthStrategy extends BaseAuthStrategy<PasswordConfig> {
+    public get kind(): string { return "password" };
+
     public get loginUrl(): string { return this.fetchDocProp("authorization_endpoint", "fallbackLoginUri"); };
     public get logoutUrl(): string { return this.fetchDocProp("end_session_endpoint", "fallbackLogoutUri"); };
     public get tokenEndpoint(): string { return this.fetchDocProp("token_endpoint", "fallbackTokenEndpoint"); };
@@ -24,8 +28,12 @@ export class PasswordAuthStrategy extends BaseAuthStrategy<PasswordConfig> {
     private refreshLoaded$: Observable<any>;
     private refreshLoadedSender: Observer<any>;
 
-    public constructor(http: Http, protected router: Router, _config: PasswordConfig) {
-        super(http, router, _config);
+    public constructor(
+        protected http: Http,
+        protected router: Router,
+        protected _config: BaseOAuthConfig,
+        @Inject(DOCUMENT) protected document: any) {
+        super(http, router, _config, document);
         this.refreshLoaded$ = Observable.create((sender: Observer<any>) => {
             this.refreshLoadedSender = sender;
         }).publish().connect();

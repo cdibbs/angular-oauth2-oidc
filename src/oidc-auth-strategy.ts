@@ -1,5 +1,6 @@
 import { Http, URLSearchParams, Headers } from '@angular/http';
-import { Injectable, Renderer } from '@angular/core';
+import { DOCUMENT } from '@angular/platform-browser';
+import { Injectable, Inject } from '@angular/core';
 import { Observable, Observer } from 'rxjs';
 import { Router } from '@angular/router';
 
@@ -15,22 +16,25 @@ import { DiscoveryDocument, OIDCConfig, BaseOAuthConfig, OIDCFlowOptions } from 
  */
 @Injectable()
 export class OIDCAuthStrategy extends BaseAuthStrategy<OIDCConfig> {
+    public get kind(): string { return "oidc" };
+
     public constructor(
         protected http: Http,
         protected router: Router,
+        @Inject(DOCUMENT) protected document: any,
         protected iframe: CheckSessionIFrame,
-        _config: OIDCConfig)
+        _config: BaseOAuthConfig)
     {
-        super(http, router, _config);
+        super(http, router, _config, document);
     }
 
     public get checkSessionIFrameUri(): string { return this.fetchDocProp("check_session_iframe", "FallbackCheckSessionIFrame"); }
 
     public initiateLoginFlow(options: OIDCFlowOptions = null): Promise<any> {
         var url = this.createLoginUrl((options && options.additionalState) || null);
-        this.router.navigateByUrl(url);
+        this.document.location.href = url;
 
-        return new Promise((resolve, reject) => reject("This return value is unused in the OIDC flow."));
+        return new Promise((resolve, reject) => resolve("This return value is unused in the OIDC flow."));
     }
 
     public createLoginUrl(extraState: string = undefined): string {

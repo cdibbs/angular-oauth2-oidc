@@ -3,14 +3,15 @@ import { Injectable, Inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import * as moment from 'moment';
 
-import { IAuthStrategy, IOAuthService } from './i';
-import { BaseAuthStrategy } from './base-auth-strategy';
+import { AnyAuthStrategy, IOAuthService, IAuthStrategy } from './i';
+import { AuthStrategyFactory } from './auth-strategy-factory';
 import { BaseOAuthConfig } from './models';
 
 @Injectable()
 export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
-    public get strategy(): IAuthStrategy<T> { return this._strategy; };
-    public get config(): BaseOAuthConfig { return this.strategy.config; };
+    private _strategy: IAuthStrategy = null;
+    public get strategy(): IAuthStrategy { return this._strategy; };
+    public get config(): BaseOAuthConfig { return this._config; };
     public resource = '';
     public options: any;
     public state = '';
@@ -20,13 +21,17 @@ export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
 
     constructor(
         private http: Http,
-        private _strategy: BaseAuthStrategy<T>) {
+        private _config: BaseOAuthConfig,
+        private _strategyFactory: AuthStrategyFactory) {
+            this._strategy = _strategyFactory.get(this.config);
             this.lastBumped = moment();
         }
 
     /** Notify of a user interaction (for the sake of preserving a session). */
     public bump(): void { this.lastBumped = moment(); }
     public initiateLoginFlow(): Promise<any> { return this.strategy.initiateLoginFlow(); }
+    public completeLoginFlow(): Promise<any> { return this.strategy.completeLoginFlow(); }
+
     public refreshSession(): Observable<any> { return this.strategy.refreshSession(); }
     private get _window(): Window { return window; }
     get identityClaims(): any { return this.strategy.identityClaims; }

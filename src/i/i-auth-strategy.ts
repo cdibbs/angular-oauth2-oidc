@@ -1,8 +1,9 @@
-import { BaseOAuthConfig, DiscoveryDocument } from '../models';
+import { BaseOAuthConfig } from '../models/base-oauth-config';
+import { DiscoveryDocument } from '../models/discovery-document';
 import { Observable } from 'rxjs';
 
-export interface IAuthStrategy<T extends BaseOAuthConfig> {
-    config: BaseOAuthConfig;
+export interface IAuthStrategy {
+    kind: string;
     loginUrl: string;
     logoutUrl: string;
     identityClaims: any;

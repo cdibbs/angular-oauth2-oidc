@@ -1,6 +1,11 @@
-import { ILogService } from '../i';
+import { ILogService } from '../i/i-log.service';
+import { IOAuthConfig } from './i/i-oauth-config';
+
 /** Represents the basic configuration required for OAuthService. */
-export class BaseOAuthConfig {
+export class BaseOAuthConfig implements IOAuthConfig {
+    /** Internal. */
+    public kind: string = "base";
+
     /** Which Storage mechanism to use. E.g., sessionStorage or localStorage (default). */
     public storage: Storage = localStorage;
 

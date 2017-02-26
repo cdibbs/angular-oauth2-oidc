@@ -1,31 +1,42 @@
 import { Http, URLSearchParams, Headers, Request } from '@angular/http';
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, OpaqueToken } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, Observer } from 'rxjs';
+import { DOCUMENT } from '@angular/platform-browser';
+import { JwtHelper } from 'angular2-jwt';
 
 import {Base64} from 'js-base64';
 import {fromByteArray} from 'base64-js';
 import sha256 from 'fast-sha256';
 import * as nacl from 'tweetnacl-util';
 
-import { DiscoveryDocument, BaseOAuthConfig } from './models';
+import { DiscoveryDocument, BaseOAuthConfig, TokenValidationResult } from './models';
+import { IJWT } from './models/i';
 import { IAuthStrategy, ILogService } from './i';
 
 @Injectable()
-export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthStrategy<TConfig> {
+export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthStrategy {
     protected _discoveryDoc: DiscoveryDocument;
     protected discoveryDocumentLoadedSender: Observer<any>;
     public discoveryDocumentLoaded: boolean = false;
     public discoveryDocumentLoaded$: Observable<any>;
     public now: Date = new Date();
+    public get kind(): string { return "base" };
 
-    public constructor(protected http: Http, protected router: Router, protected _config: TConfig) {
+    // FIXME: At the time of writing (2017-02-12), NGC did not support generic parameters in injectable constructors.
+    // For this reason, _config uses the base class rather than TConfig.
+    public constructor(
+        protected http: Http,
+        protected router: Router,
+        protected _config: BaseOAuthConfig,
+        protected jwt: JwtHelper,
+        @Inject(DOCUMENT) protected document: any) {
         this.discoveryDocumentLoaded$ = Observable.create(sender => {
             this.discoveryDocumentLoadedSender = sender;
         }).publish().connect();
     }
 
-    public get config(): TConfig { return this._config; };
+    public get config(): TConfig { return this._config as TConfig; };
     public get loginUrl(): string { return this.fetchDocProp("authorization_endpoint", "fallbackLoginUri"); };
     public get logoutUrl(): string { return this.fetchDocProp("end_session_endpoint", "fallbackLogoutUri"); };
     public get issuer(): string { return this.fetchDocProp("issuer", "fallbackIssuer"); };
@@ -89,101 +100,93 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         return false;
     };
 
-    tryLogin(options) {        
-        options = options || { };        
-        var parts = this.getFragment();
-        var accessToken = parts["access_token"];
-        var idToken = parts["id_token"];
-        var state = parts["state"];        
-        var oidcSuccess = false;
+    public completeLoginFlow(options): Promise<IJWT> {        
+        return new Promise((resolve, reject) => {
+            options = options || { };        
+            let parts = this.getFragment();
+            let accessToken = parts["access_token"];
+            let idToken = parts["id_token"];
+            let state = parts["state"];        
+            let oidcSuccess = false;
 
-        if (!accessToken || !state) return false;
-        if (this.config.oidc && !idToken) return false;
+            if (!accessToken || !state) {
+                reject("Response didn't contain accessToken or state");
+                return;
+            }
 
-        var savedNonce = this.config.storage.getItem("nonce");
-        var stateParts = state.split(';');
-        var nonceInState = stateParts[0];
+            if (this.config.oidc && !idToken) {
+                reject("Response didn't contain an idToken");
+                return;
+            }
 
-        if (savedNonce === nonceInState) {            
+            let savedNonce = this.config.storage.getItem("nonce");
+            let stateParts = state.split(';');
+            let nonceInState = stateParts[0];
+
+            if (savedNonce !== nonceInState) {            
+                reject("Nonce in response didn't match expected.");
+                return;
+            }        
+
             this.storeAccessTokenResponse(accessToken, null, parseInt(parts['expires_in']));
             if (stateParts.length > 1)
                 this.config.storage.setItem("state", stateParts[1]);
-        } else {
-            return false;
-        }        
 
-        if (this.config.oidc && !this.processIdToken(idToken, accessToken))
-            return false;
-        
-        if (options.validationHandler) {            
-            options
-                .validationHandler({accessToken: accessToken, idToken: idToken})
-                .then(() => {
-                    this.callEventIfExists(options);
-                })
-                .catch(function(reason) {
-                    this.log.error('Error validating tokens');
-                    this.log.error(reason);
-                })
-        }
-        else {
-            this.callEventIfExists(options);
-        }
-        
-        if (this.config.clearHashAfterLogin) location.hash = '';        
-        return true;
+            let validationResult = this.validateIdToken(idToken, accessToken);
+            if (this.config.oidc && !validationResult.Valid) {
+                reject(validationResult.Message);
+                return;
+            }
+            
+            if (options.validationHandler) {            
+                options
+                    .validationHandler({accessToken: accessToken, idToken: idToken})
+                    .then(() => {
+                        this.callEventIfExists(options);
+                    })
+                    .catch(function(reason) {
+                        this.log.error('Error validating tokens');
+                        this.log.error(reason);
+                    })
+            }
+            else {
+                this.callEventIfExists(options);
+            }
+            
+            if (this.config.clearHashAfterLogin) location.hash = '';        
+            resolve()
+        });
     };
     
-    processIdToken(idToken, accessToken) {
-            var tokenParts = idToken.split(".");
-            var claimsBase64 = tokenParts[1] + "====".substr(0, tokenParts[1].length % 4);
-            var claimsJson = Base64.decode(claimsBase64);
-            var claims = JSON.parse(claimsJson);
-            var savedNonce = this.config.storage.getItem("nonce");
-            
-            if (claims.aud !== this.config.clientId) {
-                this.log.warn("Wrong audience: " + claims.aud);
-                return false;
-            }
+    validateIdToken(idToken, accessToken): TokenValidationResult {
+        var jwt = this.jwt.decodeToken(idToken) as IJWT;
+        var savedNonce = this.config.storage.getItem("nonce");
+        
+        if (jwt.aud !== this.config.clientId) {
+            return new TokenValidationResult(`Wrong audience: ${jwt.aud}`);
+        }
 
-            if (this.issuer && claims.iss !== this.issuer) {
-                this.log.warn("Wrong issuer: " + claims.iss);
-                return false;
-            }
+        if (this.issuer && jwt.iss !== this.issuer) {
+            return new TokenValidationResult(`Wrong issuer: ${jwt.iss}`);
+        }
 
-            if (claims.nonce !== savedNonce) {
-                this.log.warn("Wrong nonce: " + claims.nonce);
-                return false;
-            }
-            
-            if (accessToken && !this.checkAtHash(accessToken, claims)) {
-                this.log.warn("Wrong at_hash");
-                return false;
-            }
-            
-            // Das Prüfen des Zertifikates wird der Serverseite überlassen!
+        if (jwt.nonce !== savedNonce) {
+            return new TokenValidationResult(`Wrong nonce: ${jwt.nonce}`);
+        }
+        
+        if (accessToken && !this.checkAtHash(accessToken, jwt)) {
+            return new TokenValidationResult("Wrong at_hash");
+        }
+        
+        if (this.jwt.isTokenExpired(idToken)) {
+            return new TokenValidationResult("Token has expired.");
+        }
 
-            var now = Date.now();
-            var issuedAtMSec = claims.iat * 1000;
-            var expiresAtMSec = claims.exp * 1000;
-            
-            var tenMinutesInMsec = 1000 * 60 * 10;
-
-            if (issuedAtMSec - tenMinutesInMsec >= now  || expiresAtMSec + tenMinutesInMsec <= now) {
-                this.log.warn("Token has been expired");
-                this.log.warn({
-                    now: now,
-                    issuedAtMSec: issuedAtMSec,
-                    expiresAtMSec: expiresAtMSec
-                });
-                return false;
-            }
-
-            this.config.storage.setItem("id_token", idToken);
-            this.config.storage.setItem("id_token_claims_obj", claimsJson);
-            this.config.storage.setItem("id_token_expires_at", "" + expiresAtMSec);
-                       
-            return true;
+        this.config.storage.setItem("id_token", idToken);
+        this.config.storage.setItem("id_token_claims_obj", idToken);
+        this.config.storage.setItem("id_token_expires_at", "" + this.jwt.getTokenExpirationDate(idToken));
+                    
+        return TokenValidationResult.Ok;
     }
 
     callEventIfExists(options: any) {
@@ -260,8 +263,8 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
     };
 
     protected getFragment(): { [key: string]: string } {
-        if (window.location.hash.indexOf("#") === 0) {
-            return this.parseQueryString(window.location.hash.substr(1));
+        if (this.document.location.hash.indexOf("#") === 0) {
+            return this.parseQueryString(this.document.location.hash.substr(1));
         } else {
             return {};
         }
@@ -329,3 +332,5 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         return (atHash == claimsAtHash);
     }    
 }
+
+export let AuthStrategyToken = new OpaqueToken("AuthStrategy");

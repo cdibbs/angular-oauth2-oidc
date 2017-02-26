@@ -1,4 +1,4 @@
-import { Inject, Injectable, Renderer } from '@angular/core';
+import { Inject, Injectable } from '@angular/core';
 import { ILogService, LogServiceToken } from './i';
 import { Observable, Observer, Subscription, Subscriber } from 'rxjs';
 
@@ -13,8 +13,7 @@ export class CheckSessionIFrame {
     private removeWindowListener: Function;
 
     constructor(
-        @Inject(LogServiceToken) private log: ILogService,
-        private renderer: Renderer)
+        @Inject(LogServiceToken) private log: ILogService)
     {
         this.documentLoaded$ = new Observable((subscriber: Subscriber<any>) => {
             console.log(subscriber);
@@ -24,13 +23,11 @@ export class CheckSessionIFrame {
     }
 
     public navigate(url: string, timeout: number): Observable<any>  {
-        if (!this.removeWindowListener) {
-            this.removeWindowListener = this.setupGlobalListener("window", "message", this.message);
-        }
-        this.log.debug(`${this.constructor.name}.${this.message.name} ${url} ${timeout}`);
+        this.log.debug(`${this.constructor.name} ${url} ${timeout}`);
         this.timer = Observable.timer(timeout);
-        this.timerSubscription = this.timer.subscribe(((self) => (t: number) => self.timeout.call(self, t))(this));
+        this.timerSubscription = this.timer.subscribe(this.timeout.bind(this));
         this.iframe.src = url;
+        this.iframe.onload = this.success.bind(this);
         return this.documentLoaded$;
     }
 
@@ -40,7 +37,7 @@ export class CheckSessionIFrame {
     }
 
     protected success(data): void {
-        this.log.debug(`${this.constructor.name}.${this.message.name}`);
+        this.log.debug(`${this.constructor.name}`);
         this.cleanup();
     }
 
@@ -48,11 +45,6 @@ export class CheckSessionIFrame {
         this.timerSubscription.unsubscribe();
         this.removeWindowListener();
         this.removeIFrame();
-    }
-
-    protected message(e): void {
-        this.log.debug(`${this.constructor.name}.${this.message.name}`);
-
     }
 
     protected setupIFrame(): void {
@@ -63,9 +55,5 @@ export class CheckSessionIFrame {
 
     protected removeIFrame(): void {
         window.document.body.removeChild(this.iframe);
-    }
-
-    protected setupGlobalListener(target: string, name: string, callback: Function): Function {
-        return this.renderer.listenGlobal(target, name, callback);
     }
 }
