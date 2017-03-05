@@ -8,6 +8,7 @@ import { JwtHelper } from 'angular2-jwt';
 import { BaseAuthStrategy } from './base-auth-strategy';
 import { CheckSessionIFrame } from './check-session-iframe';
 import { DiscoveryDocument, OIDCConfig, BaseOAuthConfig, OIDCFlowOptions } from './models';
+import { IJWT } from './models/i';
 
 /**
  * Represents an OIDC authentication strategy.
@@ -30,7 +31,20 @@ export class OIDCAuthStrategy extends BaseAuthStrategy<OIDCConfig> {
         super(http, router, _config, jwt, document);
     }
 
-    public get checkSessionIFrameUri(): string { return this.fetchDocProp("check_session_iframe", "FallbackCheckSessionIFrame"); }
+    public get checkSessionIFrameUri(): string { return this.createLoginUrl("refresh"); }
+
+    public completeLoginFlow(): Promise<IJWT> {
+        return super.completeLoginFlow()
+            .then<IJWT>((jwt: IJWT) => {
+                var state = this.config.storage.getItem("state");
+                if (state == "refresh" && window.parent && typeof window.parent["oidcRefreshComplete"] == "function") { // Then this was a refresh within an iframe
+                    this.config.storage.removeItem("state");
+                    window.parent["oidcRefreshComplete"]();
+                    document["completeRefresh"](jwt);
+                }
+                return jwt;
+            });
+    }
 
     public initiateLoginFlow(options: OIDCFlowOptions = null): Promise<boolean> {
         let gotoLogin = () => {
@@ -56,6 +70,7 @@ export class OIDCAuthStrategy extends BaseAuthStrategy<OIDCConfig> {
     }
 
     public refreshSession(timeout: number = 30000): Observable<any> {
-        return this.iframe.navigate(this.checkSessionIFrameUri, timeout);
+        if (this.checkSessionIFrameUri)
+            return this.iframe.navigate(this.checkSessionIFrameUri, timeout);
     }
 }

@@ -10,7 +10,6 @@ export class CheckSessionIFrame {
     private timer: Observable<any>;
     private timerSubscription: Subscription;
     private iframe: HTMLIFrameElement;
-    private removeWindowListener: Function;
 
     constructor(
         @Inject(LogServiceToken) private log: ILogService)
@@ -19,16 +18,22 @@ export class CheckSessionIFrame {
             console.log(subscriber);
             this.documentLoadedSubscriber = subscriber;
         }).share();
-        this.setupIFrame();
     }
 
     public navigate(url: string, timeout: number): Observable<any>  {
+        this.setupIFrame();
         this.log.debug(`${this.constructor.name} ${url} ${timeout}`);
         this.timer = Observable.timer(timeout);
         this.timerSubscription = this.timer.subscribe(this.timeout.bind(this));
+        window["oidcRefreshComplete"] = this.refreshComplete.bind(this);
         this.iframe.src = url;
         this.iframe.onload = this.success.bind(this);
         return this.documentLoaded$;
+    }
+
+    protected refreshComplete(): void {
+        this.log.debug("Session refresh complete.");
+        this.cleanup();
     }
 
     protected timeout(timePassed: number): void {
@@ -43,7 +48,6 @@ export class CheckSessionIFrame {
 
     private cleanup(): void {
         this.timerSubscription.unsubscribe();
-        this.removeWindowListener();
         this.removeIFrame();
     }
 

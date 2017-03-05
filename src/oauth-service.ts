@@ -2,6 +2,7 @@ import { Http } from '@angular/http';
 import { Injectable, Inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import * as moment from 'moment';
+import { JwtHelper } from 'angular2-jwt';
 
 import { AnyAuthStrategy, IOAuthService, IAuthStrategy } from './i';
 import { AuthStrategyFactory } from './auth-strategy-factory';
@@ -18,11 +19,34 @@ export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
     public validationHandler: any;
     public dummyClientSecret: string;
     public lastBumped: moment.Moment;
+    private tokenReceived: moment.Moment = null;
+    private _sessionEvents: Observable<any> = null;
+    public get SessionEvents(): Observable<any> { return this._sessionEvents; }
 
     constructor(
         private http: Http,
         private _config: BaseOAuthConfig,
+        private jwt: JwtHelper,
         private _strategyFactory: AuthStrategyFactory) {
+            this._sessionEvents = Observable
+                .interval(1000)
+                .flatMap<any, any>(() => {
+                    var exp = moment(this.jwt.getTokenExpirationDate(this.idToken));
+                    var ttexp = moment.duration(exp.diff(moment()));
+                    var tslastRefreshed = moment.duration(moment().diff(this.strategy.tokenReceived()));
+                    var tslastBumped = moment.duration(moment().diff(this.lastBumped));
+                    //let durExp = "" + Math.floor(ttexp.asHours()) + moment.utc(ttexp.asMilliseconds()).format(":mm:ss");
+                    if (tslastBumped.asMinutes() < this.config.userActivityWindow
+                        && tslastRefreshed.asMinutes() > this.config.sessionRefreshInterval) {
+                            this.refreshSession();
+                    }
+                    return Observable.from([{
+                        tokenExpires: exp,
+                        timeTilTokenExpires: ttexp,
+                        timeSinceLastRefresh: tslastRefreshed,
+                        timeSinceLastBumped: tslastBumped
+                    }]);
+                });
             this._strategy = _strategyFactory.get(this.config);
             this.lastBumped = moment();
         }

@@ -2,6 +2,7 @@ import { BaseOAuthConfig } from '../models/base-oauth-config';
 import { DiscoveryDocument } from '../models/discovery-document';
 import { Observable } from 'rxjs';
 import { BaseFlowOptions } from '../models';
+import { Moment } from 'moment';
 
 import { IJWT } from '../models/i';
 
@@ -12,6 +13,7 @@ export interface IAuthStrategy {
     identityClaims: any;
 
     loadDiscoveryDocument(fullUrl: string): Promise<DiscoveryDocument>;
+    tokenReceived(m?: Moment): Moment;
     getIdToken(): string;
     getAccessToken(): string;
     hasValidAccessToken(): boolean;

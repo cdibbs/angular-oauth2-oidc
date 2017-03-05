@@ -4,7 +4,7 @@ import { Injectable, Inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { JwtHelper } from 'angular2-jwt';
 import { Observable, Observer } from 'rxjs';
-
+import * as moment from 'moment';
 
 import { BaseAuthStrategy } from './base-auth-strategy';
 import { DiscoveryDocument, BaseOAuthConfig, PasswordConfig, PasswordFlowOptions } from './models';
@@ -75,6 +75,7 @@ export class PasswordAuthStrategy extends BaseAuthStrategy<PasswordConfig> {
             let params = search.toString();
             this.http.post(this.tokenEndpoint, params, { headers }).map(r => r.json()).subscribe(
                 (tokenResponse) => {
+                    this.tokenReceived(moment());
                     this.log.debug('tokenResponse', tokenResponse);
                     this.storeAccessTokenResponse(tokenResponse.access_token, tokenResponse.refresh_token, tokenResponse.expires_in);
                     resolve(tokenResponse);

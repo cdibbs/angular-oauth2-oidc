@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, Observer } from 'rxjs';
 import { DOCUMENT } from '@angular/platform-browser';
 import { JwtHelper } from 'angular2-jwt';
+import * as moment from 'moment';
 
 import {Base64} from 'js-base64';
 import {fromByteArray} from 'base64-js';
@@ -18,6 +19,13 @@ import { IAuthStrategy, ILogService } from './i';
 export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthStrategy {
     protected _discoveryDoc: DiscoveryDocument;
     protected discoveryDocumentLoadedSender: Observer<any>;
+    public tokenReceived(m?: moment.Moment): moment.Moment {
+        if (m)
+            this.config.storage.setItem("tokenReceived", m.toISOString());
+
+        var rec = this.config.storage.getItem("tokenReceived");
+        return rec ? moment(rec) : null
+    }
     public discoveryDocumentLoaded: boolean = false;
     public discoveryDocumentLoaded$: Observable<any>;
     public now: Date = new Date();
@@ -101,7 +109,9 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
     };
 
     public completeLoginFlow(): Promise<IJWT> {        
-        return new Promise((resolve, reject) => {     
+        return new Promise((resolve, reject) => {
+            this.tokenReceived(moment());
+
             let parts = this.getFragment();
             let accessToken = parts["access_token"];
             let idToken = parts["id_token"];

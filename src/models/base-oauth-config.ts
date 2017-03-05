@@ -26,6 +26,12 @@ export class BaseOAuthConfig implements IOAuthConfig {
 
     public resource: string = null;
 
+    /** Consider the user active if bump() events recorded within the past specified number of minutes. */
+    public userActivityWindow: number = 15;
+
+    /** How often, in minutes, to refresh the session if the user is active. */
+    public sessionRefreshInterval: number = 15;
+
     /**
      * Optional, but recommended. The URI of the auth endpoint discovery document. You must provide
      * either this, or the fallback* config options.
