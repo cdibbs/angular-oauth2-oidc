@@ -4,6 +4,7 @@ Support for OAuth 2 and OpenId Connect (OIDC) in Angular.
 
 ## Credits
 
+- angular-oauth2-oidc: https://github.com/manfredsteyer/angular-oauth2-oidc
 - generator-angular2-library: https://github.com/jvandemo/generator-angular2-library
 
 ## Tested Environment
@@ -26,8 +27,6 @@ Successfully tested with the Angular 2.x and it's Router, PathLocationStrategy a
 ## Resources
 
 - Sources of this lib: https://github.com/cdibbs/angular-oauth2-oidc
-- Based upon/thanks to: https://github.com/manfredsteyer/angular-oauth2-oidc
-
 
 ## Setup Provider for OAuthService
 
