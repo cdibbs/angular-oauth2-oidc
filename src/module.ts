@@ -22,7 +22,7 @@ import { AuthStrategyFactory } from './auth-strategy-factory';
 })
 export class OAuthModule {
   static forRoot(config: IOAuthConfig): ModuleWithProviders {
-    return <ModuleWithProviders>{
+    return {
       ngModule: OAuthModule,
       providers: [
         <ClassProvider>{ provide: OAuthService, useClass: OAuthService },
