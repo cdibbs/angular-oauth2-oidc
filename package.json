@@ -3,7 +3,6 @@
   "description": "An Angular2 library for authentication and authorization using OIDC and Password flow. Not ready for production.",
   "version": "0.5.0-alpha",
   "scripts": {
-    "ng": "ng",
     "ngc": "ngc -p src/ -aot",
     "lint": "tslint src/**/*.ts",
     "test": "node node_modules/karma/bin/karma start karma.config.js --auto-watch",

@@ -29,7 +29,7 @@ export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
         private jwt: JwtHelper,
         private _strategyFactory: AuthStrategyFactory) {
             this._sessionEvents = Observable
-                .interval(1000)
+                .interval(30000)
                 .flatMap<any, any>(() => {
                     var exp = moment(this.jwt.getTokenExpirationDate(this.idToken));
                     var ttexp = moment.duration(exp.diff(moment()));
