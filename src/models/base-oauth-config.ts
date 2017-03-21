@@ -1,3 +1,5 @@
+import { OpaqueToken } from '@angular/core';
+
 import { ILogService } from '../i/i-log.service';
 import { IOAuthConfig } from './i/i-oauth-config';
 
@@ -56,3 +58,5 @@ export class BaseOAuthConfig implements IOAuthConfig {
     /** A logger matching the method signatures of console. Default: console. */
     public log: ILogService = console;
 }
+
+export let UserProvidedConfig = new OpaqueToken("UserProvidedConfig");

@@ -234,7 +234,12 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         this.config.storage.removeItem("id_token_claims_obj");
         this.config.storage.removeItem("id_token_expires_at");
         
-        if (!this.logoutUrl || noRedirect) return;
+        if (!noRedirect) {
+            if (! this.logoutUrl) {
+                this.log.warn("No logout URL specified.");
+            }
+            return;
+        }
 
         let logoutUrl: string = 
             this.logoutUrl + "?id_token=" 

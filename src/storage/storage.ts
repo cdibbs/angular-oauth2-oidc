@@ -11,6 +11,6 @@ export class TypedStorage {
     public get namespace(): string { return this._namespace; };
 
     public get<T>(key: StorageKey<T>): T {
-
+        return <T>{};
     }
 }

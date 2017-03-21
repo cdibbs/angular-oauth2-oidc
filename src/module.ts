@@ -7,10 +7,11 @@ import { BaseAuthStrategy, AuthStrategyToken } from './base-auth-strategy';
 import { OIDCAuthStrategy } from './oidc-auth-strategy';
 import { PasswordAuthStrategy } from './password-auth-strategy';
 import { IOAuthConfig } from './models/i';
-import { OIDCConfig, PasswordConfig, ConfigToken, BaseOAuthConfig } from './models';
+import { OIDCConfig, PasswordConfig, ConfigToken, BaseOAuthConfig, UserProvidedConfig } from './models';
 import { CheckSessionIFrame } from './check-session-iframe';
 import { LogServiceToken } from './i';
 import { AuthStrategyFactory } from './auth-strategy-factory';
+import { configFactory } from './config-factory';
 
 @NgModule({
   imports: [
@@ -30,7 +31,8 @@ export class OAuthModule {
         <ClassProvider>{ provide: AuthStrategyToken, useClass: PasswordAuthStrategy, multi: true },
         <ClassProvider>{ provide: CheckSessionIFrame, useClass: CheckSessionIFrame },
         <ClassProvider>{ provide: AuthStrategyFactory, useClass: AuthStrategyFactory },
-        <ValueProvider>{ provide: BaseOAuthConfig, useValue: config },
+        <ValueProvider>{ provide: UserProvidedConfig, useValue: config },
+        <FactoryProvider>{ provide: BaseOAuthConfig, useFactory: configFactory, deps: [UserProvidedConfig, config.log] },
         <ValueProvider>{ provide: LogServiceToken, useValue: config.log }
       ]
     };
