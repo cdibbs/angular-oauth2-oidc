@@ -10,7 +10,7 @@
     "moduleResolution": "node",
     "outDir": "../lib",
     "sourceMap": true,
-    "target": "es2015",
+    "target": "es5",
     "stripInternal": true,
     "skipLibCheck": true,
     "inlineSources": true,

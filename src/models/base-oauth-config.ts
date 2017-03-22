@@ -34,12 +34,6 @@ export class BaseOAuthConfig implements IOAuthConfig {
     /** How often, in minutes, to refresh the session if the user is active. */
     public sessionRefreshInterval: number = 15;
 
-    /**
-     * Optional, but recommended. The URI of the auth endpoint discovery document. You must provide
-     * either this, or the fallback* config options.
-     */
-    public discoveryDocumentUri: string = null;
-
     /** Set this to false to skip loading the discovery document and only use fallback properties. */
     public useDiscovery: boolean = true;
 

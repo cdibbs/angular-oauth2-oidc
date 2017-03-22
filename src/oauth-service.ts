@@ -2,9 +2,8 @@ import { Http } from '@angular/http';
 import { Injectable, Inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import * as moment from 'moment';
-import { JwtHelper } from 'angular2-jwt';
 
-import { AnyAuthStrategy, IOAuthService, IAuthStrategy } from './i';
+import { AnyAuthStrategy, IOAuthService, IAuthStrategy, ILogService } from './i';
 import { AuthStrategyFactory } from './auth-strategy-factory';
 import { BaseOAuthConfig } from './models';
 
@@ -21,17 +20,17 @@ export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
     public lastBumped: moment.Moment;
     private tokenReceived: moment.Moment = null;
     private _sessionEvents: Observable<any> = null;
+    private get log(): ILogService { return this._config.log; }
     public get SessionEvents(): Observable<any> { return this._sessionEvents; }
 
     constructor(
         private http: Http,
         private _config: BaseOAuthConfig,
-        private jwt: JwtHelper,
         private _strategyFactory: AuthStrategyFactory) {
             this._sessionEvents = Observable
                 .interval(30000)
                 .flatMap<any, any>(() => {
-                    var exp = moment(this.jwt.getTokenExpirationDate(this.idToken));
+                    var exp = moment(this.strategy.getTokenExpiration(this.idToken));
                     var ttexp = moment.duration(exp.diff(moment()));
                     var tslastRefreshed = moment.duration(moment().diff(this.strategy.tokenReceived()));
                     var tslastBumped = moment.duration(moment().diff(this.lastBumped));
@@ -59,8 +58,17 @@ export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
     public refreshSession(): Observable<any> { return this.strategy.refreshSession(); }
     private get _window(): Window { return window; }
     get identityClaims(): any { return this.strategy.identityClaims; }
-    get idToken(): string { return this.strategy.getIdToken(); }
-    get accessToken(): string { return this.strategy.getAccessToken(); }
+    get idToken(): any { return this.strategy.decodeToken(this.idTokenRaw); }
+    get idTokenRaw(): string { return this.strategy.getIdToken(); }
+    get accessToken(): any { return this.strategy.decodeToken(this.accessTokenRaw); }
+    get accessTokenRaw(): string { return this.strategy.getAccessToken(); }
+    get isSessionExpired(): boolean {
+        return this.strategy.isTokenExpired(this.idToken);
+    }
+    get sessionExpiration(): Date {
+        return this.strategy.getTokenExpiration(this.idToken);
+    }
+
     get hasValidAccessToken(): boolean { return this.strategy.hasValidAccessToken(); }
     get hasValidIdToken(): boolean { return this.strategy.hasValidIdToken(); }
 

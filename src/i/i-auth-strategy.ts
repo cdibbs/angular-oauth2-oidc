@@ -50,4 +50,10 @@ export interface IAuthStrategy {
      * @returns {Promise<any>} A promise for a token response from the endpoint.
      */
     refreshSession(timeout?: number): Observable<any>;
+
+    decodeToken(rawToken: string): any;
+
+    isTokenExpired(token: any, offsetSeconds?): boolean;
+
+    getTokenExpiration(decoded: any): Date;
 }

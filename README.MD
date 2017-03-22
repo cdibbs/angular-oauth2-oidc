@@ -1,6 +1,18 @@
 # angular-oauth2-oidc
 
-Support for OAuth 2 and OpenId Connect (OIDC) in Angular.
+Angular 2 support for user-facing OAuth 2 flows. These are illustrated, below, and include
+the standard flow (authorization code flow), OIDC (OpenId Connect), and the password flow.
+
+
+| Supported | Flow                    | Purpose                                                | Supported Grant Types
+|-----------|:------------------------|:-------------------------------------------------------|:----------------------
+|     X     | Authorization Code      | Server-side apps (can store secrets)                   | Authorization code
+|     X     | Implicit (OIDC)         | Pure-JS apps (cannot store secrets)                    | Authorization code
+|     -     | Client Credentials      | Service-to-service auth (no user passwd)               | Client credentials
+|     X     | Resource Owner/Password | Where no redirects desired, and password POST possible | 
+
+Resources:
+https://www.drupal.org/node/1958718
 
 ## Credits
 

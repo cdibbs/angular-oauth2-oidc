@@ -12,7 +12,7 @@ import { LogServiceToken } from '../src/i';
 
 describe('OIDCAuthStrategy', function() {
   let config = new OIDCConfig();
-  config.discoveryDocumentUri = "http://localhost:3000";
+  //config.discoveryDocumentUri = "http://localhost:3000";
   config.fallbackIssuer = "http://localhost:3000";
 
   beforeEach(() => {

@@ -1,9 +1,9 @@
 import { Http, URLSearchParams, Headers, Request } from '@angular/http';
 import { Injectable, Inject, OpaqueToken } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, Observer } from 'rxjs';
 import { DOCUMENT } from '@angular/platform-browser';
-import { JwtHelper } from 'angular2-jwt';
+import { JwtHelper } from 'angular2-jwt'
+import { Observable, Observer } from 'rxjs';
 import * as moment from 'moment';
 
 import {Base64} from 'js-base64';
@@ -37,7 +37,6 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         protected http: Http,
         protected router: Router,
         protected _config: BaseOAuthConfig,
-        protected jwt: JwtHelper,
         @Inject(DOCUMENT) protected document: any) {
         this.discoveryDocumentLoaded$ = Observable.create(sender => {
             this.discoveryDocumentLoadedSender = sender;
@@ -54,16 +53,17 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
     /**
      * Fetch the specified discovery document propery, or fallback to a value specified in the config.
      */
-    protected fetchDocProp(prop: string, fallbackKey: string): string {
-        return (this.discoveryDocumentLoaded && this._discoveryDoc[prop]) || this._config[fallbackKey];
+    protected fetchDocProp(prop: string, fallbackKey: keyof TConfig): string {
+        return (this.discoveryDocumentLoaded && this._discoveryDoc[prop]) || (<TConfig>this._config)[fallbackKey];
     }
 
     loadDiscoveryDocument(fullUrl: string = null): Promise<DiscoveryDocument> {
+        console.log("Here are the URLs", fullUrl, this.config.fallbackIssuer, this.config);
         return new Promise((resolve, reject) => {
             if (!fullUrl) {
                 if (! this.config.fallbackIssuer)
-                    reject("Must provide either fullUrl or and config.fallbackIssuer.");
-                fullUrl = this.config.fallbackIssuer + '/.well-known/openid-configuration';
+                    reject("Must provide either fullUrl parameter or a config.fallbackIssuer.");
+                fullUrl = this.config.fallbackIssuer + "/.well-known/openid-configuration";
             }
 
             this.http.get(fullUrl).map(r => r.json()).subscribe(
@@ -148,12 +148,12 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
             }
                   
             if (this.config.clearHashAfterLogin) location.hash = '';        
-            resolve(this.jwt.decodeToken(idToken));
+            resolve(this.decodeToken(idToken));
         });
     };
     
     validateIdToken(idToken, accessToken): TokenValidationResult {
-        var jwt = this.jwt.decodeToken(idToken) as IJWT;
+        var jwt = this.decodeToken(idToken) as IJWT;
         var savedNonce = this.config.storage.getItem("nonce");
         
         if (jwt.aud !== this.config.clientId) {
@@ -172,13 +172,13 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
             return new TokenValidationResult("Wrong at_hash");
         }
         
-        if (this.jwt.isTokenExpired(idToken)) {
+        if (this.isTokenExpired(idToken)) {
             return new TokenValidationResult("Token has expired.");
         }
 
         this.config.storage.setItem("id_token", idToken);
         this.config.storage.setItem("id_token_claims_obj", idToken);
-        this.config.storage.setItem("id_token_expires_at", "" + this.jwt.getTokenExpirationDate(idToken));
+        this.config.storage.setItem("id_token_expires_at", "" + this.getTokenExpiration(idToken));
                     
         return TokenValidationResult.Ok;
     }
@@ -225,6 +225,17 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
     };
 
     public logOut(noRedirect: boolean = false): void {
+        if (this.config.useDiscovery && ! this.discoveryDocumentLoaded) {
+            this.loadDiscoveryDocument().then(d => {
+                this._logOut(noRedirect);
+            })
+        } else {
+            this._logOut(noRedirect);
+        }
+    }
+
+    private _logOut(noRedirect: boolean = false): void {
+        
         var id_token = this.getIdToken();
         this.config.storage.removeItem("access_token");
         this.config.storage.removeItem("id_token");
@@ -241,13 +252,76 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
             return;
         }
 
+        this.log.debug(this.logoutUrl);
         let logoutUrl: string = 
             this.logoutUrl + "?id_token=" 
                 + encodeURIComponent(id_token)
                 + "&redirect_uri="
                 + encodeURIComponent(this.config.redirectUri);
+        this.log.debug(logoutUrl);
         this.router.navigateByUrl(logoutUrl);
     };
+
+    decodeToken(rawToken: string): any {
+        try {
+            let parts = rawToken.split(".");
+            let raw = this.base64Decode(parts[1]);
+            let json = JSON.parse(raw);
+            return json;
+        } catch(err) {
+            this.log.warn("Error decoding token.", err, rawToken);
+            return null;
+        }
+    }
+
+    isTokenExpired(token: any, offsetSeconds = 0): boolean {
+        let date = this.getTokenExpiration(token);
+        if (date == null) {
+            return false;
+        }
+        // Token expired?
+        return !(date.valueOf() > (new Date().valueOf() + (offsetSeconds * 1000)));
+    }
+
+    getTokenExpiration(decoded: any): Date {
+        if (!decoded || !decoded.hasOwnProperty('exp')) {
+            return null;
+        }
+        let date = new Date(0); // The 0 here is the key, which sets the date to the epoch
+        date.setUTCSeconds(decoded.exp);
+        return date;
+    }
+
+    // Thanks to angular2-jwt
+    private decodeUnicode(t: string) {
+        var d = atob(t);
+        return decodeURIComponent(Array.prototype.map.call(d, function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+    }
+
+    // Thanks to angular2-jwt
+    private base64Decode(t: string) {
+        var output = t.replace(/-/g, '+').replace(/_/g, '/');
+        switch (output.length % 4) {
+            case 0: {
+                break;
+            }
+            case 2: {
+                output += '==';
+                break;
+            }
+            case 3: {
+                output += '=';
+                break;
+            }
+            default: {
+                throw 'Illegal base64url string!';
+            }
+        }
+        return atob(output);
+    }
+
 
     protected getFragment(): { [key: string]: string } {
         if (this.document.location.hash.indexOf("#") === 0) {

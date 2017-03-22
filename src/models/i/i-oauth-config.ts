@@ -25,14 +25,8 @@ export interface IOAuthConfig {
 
     resource?: string;
 
-    /** Set this to false to skip loading the discovery document and only use fallback properties. */
+    /** Set this to false to skip loading the discovery document during login/logout/refresh and only use fallback properties. */
     useDiscovery?: boolean;
-
-    /**
-     * Optional, but recommended. The URI of the auth endpoint discovery document. You must provide
-     * either this, or the fallback* config options.
-     */
-    discoveryDocumentUri?: string;
 
     /** Optional, but recommended. The base URI of your auth endpoint, if the discovery document could not be loaded. */
     fallbackIssuer?: string;

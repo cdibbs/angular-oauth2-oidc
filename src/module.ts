@@ -32,7 +32,7 @@ export class OAuthModule {
         <ClassProvider>{ provide: CheckSessionIFrame, useClass: CheckSessionIFrame },
         <ClassProvider>{ provide: AuthStrategyFactory, useClass: AuthStrategyFactory },
         <ValueProvider>{ provide: UserProvidedConfig, useValue: config },
-        <FactoryProvider>{ provide: BaseOAuthConfig, useFactory: configFactory, deps: [UserProvidedConfig, config.log] },
+        <FactoryProvider>{ provide: BaseOAuthConfig, useFactory: configFactory, deps: [UserProvidedConfig, LogServiceToken] },
         <ValueProvider>{ provide: LogServiceToken, useValue: config.log }
       ]
     };

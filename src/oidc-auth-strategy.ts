@@ -3,7 +3,6 @@ import { DOCUMENT } from '@angular/platform-browser';
 import { Injectable, Inject } from '@angular/core';
 import { Observable, Observer } from 'rxjs';
 import { Router } from '@angular/router';
-import { JwtHelper } from 'angular2-jwt';
 
 import { BaseAuthStrategy } from './base-auth-strategy';
 import { CheckSessionIFrame } from './check-session-iframe';
@@ -23,12 +22,11 @@ export class OIDCAuthStrategy extends BaseAuthStrategy<OIDCConfig> {
     public constructor(
         protected http: Http,
         protected router: Router,
-        protected jwt: JwtHelper,
         @Inject(DOCUMENT) protected document: any,
         protected iframe: CheckSessionIFrame,
         _config: BaseOAuthConfig)
     {
-        super(http, router, _config, jwt, document);
+        super(http, router, <OIDCConfig>_config, document);
     }
 
     public get checkSessionIFrameUri(): string { return this.createLoginUrl("refresh"); }
