@@ -3,16 +3,14 @@ import { Injectable, Inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import * as moment from 'moment';
 
-import { AnyAuthStrategy, IOAuthService, IAuthStrategy, ILogService } from './i';
-import { AuthStrategyFactory } from './auth-strategy-factory';
-import { BaseOAuthConfig } from './models';
+import { SelectedAuthStrategyToken } from './base-auth-strategy';
+import { AnyAuthStrategy, IOAuthService, IAuthStrategy, ILogService, LogServiceToken } from './i';
+import { BaseOAuthConfig, DiscoveryDocument } from './models';
 
 @Injectable()
 export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
-    private _strategy: IAuthStrategy = null;
     public get strategy(): IAuthStrategy { return this._strategy; };
     public get config(): BaseOAuthConfig { return this._config; };
-    public resource = '';
     public options: any;
     public state = '';
     public validationHandler: any;
@@ -20,13 +18,14 @@ export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
     public lastBumped: moment.Moment;
     private tokenReceived: moment.Moment = null;
     private _sessionEvents: Observable<any> = null;
-    private get log(): ILogService { return this._config.log; }
     public get SessionEvents(): Observable<any> { return this._sessionEvents; }
 
     constructor(
         private http: Http,
         private _config: BaseOAuthConfig,
-        private _strategyFactory: AuthStrategyFactory) {
+        @Inject(SelectedAuthStrategyToken) private _strategy: IAuthStrategy,
+        @Inject(LogServiceToken) log: ILogService)
+    {
             this._sessionEvents = Observable
                 .interval(30000)
                 .flatMap<any, any>(() => {
@@ -46,7 +45,6 @@ export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
                         timeSinceLastBumped: tslastBumped
                     }]);
                 });
-            this._strategy = _strategyFactory.get(this.config);
             this.lastBumped = moment();
         }
 
@@ -54,8 +52,9 @@ export class OAuthService<T extends BaseOAuthConfig> implements IOAuthService {
     public bump(): void { this.lastBumped = moment(); }
     public initiateLoginFlow(): Promise<any> { return this.strategy.initiateLoginFlow(); }
     public completeLoginFlow(): Promise<any> { return this.strategy.completeLoginFlow(); }
+    public loadDiscoveryDocument(fullUrl?: string): Promise<DiscoveryDocument> { return this.strategy.loadDiscoveryDocument(fullUrl); }
 
-    public refreshSession(): Observable<any> { return this.strategy.refreshSession(); }
+    public refreshSession(timeout?: number): Observable<any> { return this.strategy.refreshSession(timeout); }
     private get _window(): Window { return window; }
     get identityClaims(): any { return this.strategy.identityClaims; }
     get idToken(): any { return this.strategy.decodeToken(this.idTokenRaw); }

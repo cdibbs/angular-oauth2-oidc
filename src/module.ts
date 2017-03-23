@@ -3,15 +3,17 @@ import { NgModule, ModuleWithProviders, ClassProvider, ValueProvider, FactoryPro
 import { CommonModule } from "@angular/common";
 
 import { OAuthService } from './oauth-service';
-import { BaseAuthStrategy, AuthStrategyToken } from './base-auth-strategy';
+import { BaseAuthStrategy, AuthStrategyToken, SelectedAuthStrategyToken } from './base-auth-strategy';
 import { OIDCAuthStrategy } from './oidc-auth-strategy';
 import { PasswordAuthStrategy } from './password-auth-strategy';
 import { IOAuthConfig } from './models/i';
 import { OIDCConfig, PasswordConfig, ConfigToken, BaseOAuthConfig, UserProvidedConfig } from './models';
+import { ConfigValidatorToken } from './validators/i';
+import { OIDCConfigValidatorService } from './validators';
 import { CheckSessionIFrame } from './check-session-iframe';
 import { LogServiceToken } from './i';
-import { AuthStrategyFactory } from './auth-strategy-factory';
-import { configFactory } from './config-factory';
+
+import { authStrategyFactory, configFactory } from './injection';
 
 @NgModule({
   imports: [
@@ -29,11 +31,12 @@ export class OAuthModule {
         <ClassProvider>{ provide: OAuthService, useClass: OAuthService },
         <ClassProvider>{ provide: AuthStrategyToken, useClass: OIDCAuthStrategy, multi: true },
         <ClassProvider>{ provide: AuthStrategyToken, useClass: PasswordAuthStrategy, multi: true },
+        <ClassProvider>{ provide: ConfigValidatorToken, useClass: OIDCConfigValidatorService, multi: false },
         <ClassProvider>{ provide: CheckSessionIFrame, useClass: CheckSessionIFrame },
-        <ClassProvider>{ provide: AuthStrategyFactory, useClass: AuthStrategyFactory },
         <ValueProvider>{ provide: UserProvidedConfig, useValue: config },
-        <FactoryProvider>{ provide: BaseOAuthConfig, useFactory: configFactory, deps: [UserProvidedConfig, LogServiceToken] },
-        <ValueProvider>{ provide: LogServiceToken, useValue: config.log }
+        <FactoryProvider>{ provide: BaseOAuthConfig, useFactory: configFactory, deps: [UserProvidedConfig, LogServiceToken, ConfigValidatorToken] },
+        <FactoryProvider>{ provide: SelectedAuthStrategyToken, useFactory: authStrategyFactory, deps: [AuthStrategyToken, BaseOAuthConfig]},
+        <FactoryProvider>{ provide: LogServiceToken, useFactory: config.logFactory }
       ]
     };
   }

@@ -4,8 +4,9 @@ import { Http, BaseRequestOptions, HttpModule } from '@angular/http';
 import { RouterModule } from '@angular/router';
 import {APP_BASE_HREF} from '@angular/common';
 
-import { OAuthModule } from '../';
+import { OAuthModule, OAuthService } from '../src';
 import { CheckSessionIFrame } from '../src/check-session-iframe';
+import { SelectedAuthStrategyToken } from '../src/base-auth-strategy';
 import { OIDCAuthStrategy } from '../src/oidc-auth-strategy';
 import { DiscoveryDocument, OIDCConfig } from '../src/models';
 import { LogServiceToken } from '../src/i';
@@ -13,42 +14,40 @@ import { LogServiceToken } from '../src/i';
 describe('OIDCAuthStrategy', function() {
   let config = new OIDCConfig();
   //config.discoveryDocumentUri = "http://localhost:3000";
+  config.kind = "oidc";
   config.fallbackIssuer = "http://localhost:3000";
+  config.redirectUri = "http://localhost:3000";
+  config.clientId = "TestApp";
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [
-        HttpModule, RouterModule.forRoot([]),
+        HttpModule,
+        RouterModule.forRoot([]),
         OAuthModule.forRoot(config)
       ],
       providers: [
-        <ValueProvider>{ provide: OIDCConfig, useValue: config },
         <ValueProvider>{ provide: APP_BASE_HREF, useValue : '/' },
-        <ValueProvider>{ provide: LogServiceToken, useValue: console },
-        <ClassProvider>{ provide: CheckSessionIFrame, useClass: CheckSessionIFrame },
-        <ClassProvider>{ provide: Renderer, useClass: Renderer }
       ]
     });
   });
 
   it('should load the discovery document.', (done) => {
-    inject([OIDCAuthStrategy], (strategy: OIDCAuthStrategy) => {
-      strategy.loadDiscoveryDocument().then((d: DiscoveryDocument) => {
+    inject([OAuthService], (svc: OAuthService<OIDCConfig>) => {
+      svc.loadDiscoveryDocument().then((d: DiscoveryDocument) => {
         expect(d).toBeDefined();
-        expect(strategy.loginUrl).toBe(d.authorization_endpoint);
-        expect(strategy.logoutUrl).toBe(d.end_session_endpoint);
-        expect(strategy.issuer).toBe(d.issuer);
-        expect(strategy.checkSessionIFrameUri).toBe(d.check_session_iframe);
+        expect(svc.strategy.loginUrl).toBe(d.authorization_endpoint);
+        expect(svc.strategy.logoutUrl).toBe(d.end_session_endpoint);
         done();
       });
     })();
   });
 
   it('should refresh session.', (done) => {
-    inject([OIDCAuthStrategy], (strategy: OIDCAuthStrategy) => {
-      strategy.loadDiscoveryDocument().then((d: DiscoveryDocument) => {
+    inject([OAuthService], (svc: OAuthService<OIDCConfig>) => {
+      svc.loadDiscoveryDocument().then((d: DiscoveryDocument) => {
         expect(d).toBeDefined();
-        return strategy.refreshSession(1000).toPromise();
+        return svc.refreshSession(1000).toPromise();
       }).then((r) => {
         console.log("refresh response: ", r);
         done();

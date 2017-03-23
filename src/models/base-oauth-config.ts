@@ -49,8 +49,8 @@ export class BaseOAuthConfig implements IOAuthConfig {
     /** Optional */
     public fallbackTokenEndpoint: string = null;
 
-    /** A logger matching the method signatures of console. Default: console. */
-    public log: ILogService = console;
+    /** A logger factory returning a logger that matches the method signature of console. Default: console. */
+    logFactory: (...args: any[]) => ILogService = () => console;
 }
 
 export let UserProvidedConfig = new OpaqueToken("UserProvidedConfig");

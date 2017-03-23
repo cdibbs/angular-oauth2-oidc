@@ -1,6 +1,7 @@
-import { ILogService } from "./i";
-import { IOAuthConfig } from "./models/i";
-import { OIDCConfig, BaseOAuthConfig, PasswordConfig, UserProvidedConfig } from './models';
+import { ILogService } from "../i";
+import { IOAuthConfig } from "../models/i";
+import { OIDCConfig, BaseOAuthConfig, PasswordConfig, UserProvidedConfig, ConfigurationError } from '../models';
+import { IConfigValidator, ConfigValidatorToken } from '../validators/i';
 
 /**
  * Ensures final, injected config has default options + user options.
@@ -10,16 +11,29 @@ import { OIDCConfig, BaseOAuthConfig, PasswordConfig, UserProvidedConfig } from 
  */
 export function configFactory(
     userConfig: IOAuthConfig,
-    log: ILogService): IOAuthConfig {
+    log: ILogService,
+    validator: IConfigValidator): IOAuthConfig {
+
+    let c: IOAuthConfig;
     switch (userConfig.kind) {
         case "oidc":
-            return extend(new OIDCConfig(), userConfig);
+            c = extend(new OIDCConfig(), userConfig);
+            break;
         case "password":
-            return extend(new PasswordConfig(), userConfig);
+            c = extend(new PasswordConfig(), userConfig);
+            break;
         default:
             log.warn(`Unrecognized config type ${userConfig.kind}.`);
-            return extend(new BaseOAuthConfig(), userConfig);
+            c = extend(new BaseOAuthConfig(), userConfig);
+            break;
     }
+
+    let results = validator.validate(c);
+    if (results.length) {
+        throw new ConfigurationError("Configuration errors found.", results);
+    }
+
+    return c;
 }
 
 /**

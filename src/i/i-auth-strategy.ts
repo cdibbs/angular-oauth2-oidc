@@ -12,7 +12,7 @@ export interface IAuthStrategy {
     logoutUrl: string;
     identityClaims: any;
 
-    loadDiscoveryDocument(fullUrl: string): Promise<DiscoveryDocument>;
+    loadDiscoveryDocument(fullUrl?: string): Promise<DiscoveryDocument>;
     tokenReceived(m?: Moment): Moment;
     getIdToken(): string;
     getAccessToken(): string;

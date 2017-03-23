@@ -40,6 +40,10 @@ export interface IOAuthConfig {
     /** Optional */
     fallbackTokenEndpoint?: string;
 
-    /** A logger matching the method signatures of console. Default: console. */
-    log?: ILogService;
+    sessionRefreshInterval?: number;
+
+    userActivityWindow?: number;
+
+    /** A logger factory returning a logger that matches the method signature of console. Default: console. */
+    logFactory: (...args: any[]) => ILogService;
 }

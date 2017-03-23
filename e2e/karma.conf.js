@@ -13,7 +13,12 @@ module.exports = function (config) {
       require('karma-webpack')
     ],
     files: [
-      { pattern: './e2e.ts', watched: false }
+      { pattern: './e2e.ts', watched: false },
+      { pattern: '../src/*.ts', watched: true }
+    ],
+    exclude: [
+      '../src/*.spec.ts',
+      '../src/*.ts'
     ],
     preprocessors: {
       './e2e.ts': ['webpack']

@@ -3,4 +3,7 @@ import { IOIDCConfig } from './i/i-oidc-config';
 
 export class OIDCConfig extends BaseOAuthConfig implements IOIDCConfig {
     public kind: string = "oidc";
+
+    public useIFrameRefresh: boolean = false;
+    public iFrameRefreshUri: string = null;
 }

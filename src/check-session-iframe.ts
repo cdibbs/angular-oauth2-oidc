@@ -41,8 +41,9 @@ export class CheckSessionIFrame {
         this.cleanup();
     }
 
-    protected success(data): void {
+    protected success(): void {
         this.log.debug(`${this.constructor.name}`);
+        this.documentLoadedSubscriber.next();
         this.cleanup();
     }
 

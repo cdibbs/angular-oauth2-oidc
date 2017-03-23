@@ -12,6 +12,7 @@ import sha256 from 'fast-sha256';
 import * as nacl from 'tweetnacl-util';
 
 import { DiscoveryDocument, BaseOAuthConfig, TokenValidationResult } from './models';
+import { LogServiceToken } from './i';
 import { IJWT } from './models/i';
 import { IAuthStrategy, ILogService } from './i';
 
@@ -37,7 +38,9 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         protected http: Http,
         protected router: Router,
         protected _config: BaseOAuthConfig,
-        @Inject(DOCUMENT) protected document: any) {
+        @Inject(DOCUMENT) protected document: any,
+        @Inject(LogServiceToken) protected log: ILogService) 
+    {
         this.discoveryDocumentLoaded$ = Observable.create(sender => {
             this.discoveryDocumentLoadedSender = sender;
         }).publish().connect();
@@ -48,8 +51,6 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
     public get logoutUrl(): string { return this.fetchDocProp("end_session_endpoint", "fallbackLogoutUri"); };
     public get issuer(): string { return this.fetchDocProp("issuer", "fallbackIssuer"); };
 
-    protected get log(): ILogService { return this.config.log; };
-
     /**
      * Fetch the specified discovery document propery, or fallback to a value specified in the config.
      */
@@ -58,7 +59,7 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
     }
 
     loadDiscoveryDocument(fullUrl: string = null): Promise<DiscoveryDocument> {
-        console.log("Here are the URLs", fullUrl, this.config.fallbackIssuer, this.config);
+        this.log.debug("loadDiscoveryDocument", fullUrl, this.config.fallbackIssuer, this.config);
         return new Promise((resolve, reject) => {
             if (!fullUrl) {
                 if (! this.config.fallbackIssuer)
@@ -66,6 +67,7 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
                 fullUrl = this.config.fallbackIssuer + "/.well-known/openid-configuration";
             }
 
+            this.log.debug("loadDiscoveryDocument", "computed URL", fullUrl);
             this.http.get(fullUrl).map(r => r.json()).subscribe(
                 (doc: DiscoveryDocument) => {
                     this._discoveryDoc = doc;
@@ -395,3 +397,4 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
 }
 
 export let AuthStrategyToken = new OpaqueToken("AuthStrategy");
+export let SelectedAuthStrategyToken = new OpaqueToken("SelectedAuthStrategy");

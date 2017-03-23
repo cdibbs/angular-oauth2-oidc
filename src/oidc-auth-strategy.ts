@@ -8,6 +8,7 @@ import { BaseAuthStrategy } from './base-auth-strategy';
 import { CheckSessionIFrame } from './check-session-iframe';
 import { DiscoveryDocument, OIDCConfig, BaseOAuthConfig, OIDCFlowOptions } from './models';
 import { IJWT } from './models/i';
+import { ILogService, LogServiceToken } from './i';
 
 /**
  * Represents an OIDC authentication strategy.
@@ -24,14 +25,16 @@ export class OIDCAuthStrategy extends BaseAuthStrategy<OIDCConfig> {
         protected router: Router,
         @Inject(DOCUMENT) protected document: any,
         protected iframe: CheckSessionIFrame,
-        _config: BaseOAuthConfig)
+        _config: BaseOAuthConfig,
+        @Inject(LogServiceToken) log: ILogService)
     {
-        super(http, router, <OIDCConfig>_config, document);
+        super(http, router, <OIDCConfig>_config, document, log);
     }
 
     public get checkSessionIFrameUri(): string { return this.createLoginUrl("refresh"); }
 
     public completeLoginFlow(): Promise<IJWT> {
+        console.log("here we are");
         return super.completeLoginFlow()
             .then<IJWT>((jwt: IJWT) => {
                 var state = this.config.storage.getItem("state");

@@ -11,4 +11,7 @@ export * from './password-flow-options';
 export * from './oidc-flow-options';
 export * from './token-validation-result';
 
+export * from './config-validation-result';
+export * from './configuration-error';
+
 export let ConfigToken = new OpaqueToken("ConfigToken");

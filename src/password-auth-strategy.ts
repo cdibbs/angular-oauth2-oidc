@@ -7,6 +7,7 @@ import * as moment from 'moment';
 
 import { BaseAuthStrategy } from './base-auth-strategy';
 import { DiscoveryDocument, BaseOAuthConfig, PasswordConfig, PasswordFlowOptions } from './models';
+import { ILogService, LogServiceToken } from './i';
 
 /**
  * Represents an OIDC authentication strategy.
@@ -32,8 +33,10 @@ export class PasswordAuthStrategy extends BaseAuthStrategy<PasswordConfig> {
         protected http: Http,
         protected router: Router,
         protected _config: BaseOAuthConfig,
-        @Inject(DOCUMENT) protected document: any) {
-        super(http, router, <PasswordConfig>_config, document);
+        @Inject(DOCUMENT) protected document: any,
+        @Inject(LogServiceToken) log: ILogService)
+    {
+        super(http, router, <PasswordConfig>_config, document, log);
         this.refreshLoaded$ = Observable.create((sender: Observer<any>) => {
             this.refreshLoadedSender = sender;
         }).publish().connect();
