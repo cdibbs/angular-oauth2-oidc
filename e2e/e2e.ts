@@ -27,7 +27,7 @@ getTestBed().initTestEnvironment(
   platformBrowserDynamicTesting()
 );
 // Then we find all the tests.
-let context = require.context('./', true, /\.e2e-spec\.ts$/);
+let context = require.context('./', false, /\.e2e-spec\.ts$/);
 // And load the modules.
 context.keys().map(context);
 // Finally, start Karma to run the tests.

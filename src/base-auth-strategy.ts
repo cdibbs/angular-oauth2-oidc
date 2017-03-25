@@ -2,7 +2,6 @@ import { Http, URLSearchParams, Headers, Request } from '@angular/http';
 import { Injectable, Inject, OpaqueToken } from '@angular/core';
 import { Router } from '@angular/router';
 import { DOCUMENT } from '@angular/platform-browser';
-import { JwtHelper } from 'angular2-jwt'
 import { Observable, Observer } from 'rxjs';
 import * as moment from 'moment';
 

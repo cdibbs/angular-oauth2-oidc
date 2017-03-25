@@ -1,11 +1,11 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    "baseUrl": "./",
     "declaration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "lib": ["es2015", "dom"],
-    "mapRoot": "./",
+    "mapRoot": "../lib",
     "module": "es2015",
     "moduleResolution": "node",
     "outDir": "../lib",
@@ -18,6 +18,10 @@
       "../node_modules/@types"
     ]
   },
+  "files": [
+    "index.ts",
+    "module.ts"
+  ],
   "exclude": [
     "node_modules",
     "lib",
@@ -26,7 +30,7 @@
    "angularCompilerOptions": {
     "annotateForClosureCompiler": true,
     "strictMetadataEmit": true,
-    "skipTemplateCodegen": true,
-    "flatModuleOutFile": "index.js"
+    "skipTemplateCodegen": true
+    //"flatModuleOutFile": "index.js"
   }
 }

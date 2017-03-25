@@ -17,6 +17,7 @@ module.exports = function (config) {
       { pattern: '../src/*.ts', watched: true }
     ],
     exclude: [
+      '../e2e/resources/*.ts',
       '../src/*.spec.ts',
       '../src/*.ts'
     ],

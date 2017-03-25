@@ -15,6 +15,9 @@ module.exports = function (config) {
     files: [
       { pattern: './src/test.ts', watched: false }
     ],
+    exclude: [
+      'e2e/resources'
+    ],
     preprocessors: {
       './src/test.ts': ['webpack']
     },

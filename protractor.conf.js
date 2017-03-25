@@ -9,6 +9,7 @@ exports.config = {
   specs: [
     './e2e/**/*.e2e-spec.ts'
   ],
+  exclude: ["./e2e/resources"],
   capabilities: {
     'browserName': 'chrome'
   },
