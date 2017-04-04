@@ -15,7 +15,7 @@ export class CheckSessionIFrame {
         @Inject(LogServiceToken) private log: ILogService)
     {
         this.documentLoaded$ = new Observable((subscriber: Subscriber<any>) => {
-            console.log(subscriber);
+            this.log.log(subscriber);
             this.documentLoadedSubscriber = subscriber;
         }).share();
     }

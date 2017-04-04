@@ -246,25 +246,27 @@ export class BaseAuthStrategy<TConfig extends BaseOAuthConfig> implements IAuthS
         this.config.storage.removeItem("id_token_claims_obj");
         this.config.storage.removeItem("id_token_expires_at");
         
-        if (!noRedirect) {
-            if (! this.logoutUrl) {
-                this.log.warn("No logout URL specified.");
-            }
+        if (noRedirect) {
             return;
         }
 
-        this.log.debug(this.logoutUrl);
+        if (! this.logoutUrl) {
+            this.log.warn("No logout URL specified.");
+            return;
+        }
+
         let logoutUrl: string = 
             this.logoutUrl + "?id_token=" 
                 + encodeURIComponent(id_token)
                 + "&redirect_uri="
                 + encodeURIComponent(this.config.redirectUri);
-        this.log.debug(logoutUrl);
-        this.router.navigateByUrl(logoutUrl);
+        window.location.href = logoutUrl;
     };
 
     decodeToken(rawToken: string): any {
         try {
+            if (rawToken == null) return null;
+            
             let parts = rawToken.split(".");
             let raw = this.base64Decode(parts[1]);
             let json = JSON.parse(raw);

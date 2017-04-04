@@ -1,7 +1,7 @@
 {
   "name": "angular-oauth2-oidc",
   "description": "An Angular2 library for authentication and authorization using OIDC and Password flow. Not ready for production.",
-  "version": "0.5.22",
+  "version": "0.5.27",
   "scripts": {
     "ngc": "ngc -p src/ -aot",
     "lint": "tslint src/**/*.ts",

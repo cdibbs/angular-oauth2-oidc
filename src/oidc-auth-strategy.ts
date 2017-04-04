@@ -34,7 +34,6 @@ export class OIDCAuthStrategy extends BaseAuthStrategy<OIDCConfig> {
     public get checkSessionIFrameUri(): string { return this.createLoginUrl("refresh"); }
 
     public completeLoginFlow(): Promise<IJWT> {
-        console.log("here we are");
         return super.completeLoginFlow()
             .then<IJWT>((jwt: IJWT) => {
                 var state = this.config.storage.getItem("state");
